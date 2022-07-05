@@ -151,7 +151,7 @@ const (
 
 	defaultACMEDNS01CheckMethod = dnsutil.ACMEDNS01CheckViaDNSLookup
 
-	defaultDnsOverHttpsJsonEndpoint = "https://8.8.8.8/resolve"
+	defaultDnsOverHttpsJsonEndpoint = dnsutil.DefaultDnsOverHttpsJsonEndpoint
 
 	defaultClusterResourceNamespace = "kube-system"
 	defaultNamespace                = ""
@@ -274,6 +274,7 @@ func NewControllerOptions() *ControllerOptions {
 		DefaultAutoCertificateAnnotations: defaultAutoCertificateAnnotations,
 		ACMEHTTP01SolverNameservers:       []string{},
 		ACMEDNS01CheckMethod:              defaultACMEDNS01CheckMethod,
+		DnsOverHttpsJsonEndpoint:          defaultDnsOverHttpsJsonEndpoint,
 		DNS01RecursiveNameservers:         []string{},
 		DNS01RecursiveNameserversOnly:     defaultDNS01RecursiveNameserversOnly,
 		EnableCertificateOwnerRef:         defaultEnableCertificateOwnerRef,

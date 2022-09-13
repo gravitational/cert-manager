@@ -250,4 +250,7 @@ type ACMEDNS01Config struct {
 	// token is served at the challenge URL. This should be a valid duration
 	// string, for example 180s or 1h
 	CheckRetryPeriod time.Duration `json:"checkRetryPeriod,omitempty"`
+
+	// DNS01PropagationTime is the additional time the controller should wait for DNS propagation after pre-checks have passed.
+	PropagationTime time.Duration
 }

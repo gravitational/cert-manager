@@ -18,11 +18,10 @@ package v1alpha1
 
 import (
 	"fmt"
+	"time"
 
 	"k8s.io/apimachinery/pkg/runtime"
 	logsapi "k8s.io/component-base/logs/api/v1"
-
-	"time"
 
 	cm "github.com/cert-manager/cert-manager/pkg/apis/certmanager"
 	"github.com/cert-manager/cert-manager/pkg/apis/config/controller/v1alpha1"
@@ -82,6 +81,7 @@ var (
 	defaultDNS01RecursiveNameserversOnly = false
 	defaultDNS01RecursiveNameservers     = []string{}
 	defaultDNS01CheckRetryPeriod         = 10 * time.Second
+	defaultDNS01PropagationTime          = 60 * time.Second
 
 	defaultNumberOfConcurrentWorkers int32 = 5
 	defaultMaxConcurrentChallenges   int32 = 60
@@ -331,5 +331,9 @@ func SetDefaults_ACMEDNS01Config(obj *v1alpha1.ACMEDNS01Config) {
 
 	if obj.CheckRetryPeriod == time.Duration(0) {
 		obj.CheckRetryPeriod = defaultDNS01CheckRetryPeriod
+	}
+
+	if obj.PropagationTime == time.Duration(0) {
+		obj.PropagationTime = defaultDNS01PropagationTime
 	}
 }

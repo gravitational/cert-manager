@@ -34,6 +34,17 @@ const (
 	route53TTL = 10
 )
 
+var (
+	// fqdnLock prevents any single-process consumer of this package from
+	// attempting to update TXT records for the same FQDN concurrently.
+	// This is necessary to support multi-value TXT records.
+	//
+	// We could allow simultaneous updates to the same domain in
+	// different hosted zones, but since that is not useful, we
+	// serialize all same-domain requests to be safe.
+	fqdnLock = lockMap{}
+)
+
 // DNSProvider implements the util.ChallengeProvider interface
 type DNSProvider struct {
 	dns01Nameservers []string
@@ -173,22 +184,76 @@ func NewDNSProvider(accessKeyID, secretAccessKey, hostedZoneID, region, role str
 // Present creates a TXT record using the specified parameters
 func (r *DNSProvider) Present(domain, fqdn, value string) error {
 	value = `"` + value + `"`
-	return r.changeRecord(route53.ChangeActionUpsert, fqdn, value, route53TTL)
+	hostedZoneID, err := r.getHostedZoneID(fqdn)
+	if err != nil {
+		return fmt.Errorf("failed to determine Route 53 hosted zone ID: %v", err)
+	}
+	fqdnLock.Lock(fqdn)
+	defer fqdnLock.Unlock(fqdn)
+	values, err := r.getRecord(hostedZoneID, fqdn)
+	if err != nil {
+		return err
+	}
+	values = append(values, value)
+	return r.changeRecord(route53.ChangeActionUpsert, hostedZoneID, fqdn, values, route53TTL)
 }
 
 // CleanUp removes the TXT record matching the specified parameters
 func (r *DNSProvider) CleanUp(domain, fqdn, value string) error {
 	value = `"` + value + `"`
-	return r.changeRecord(route53.ChangeActionDelete, fqdn, value, route53TTL)
-}
-
-func (r *DNSProvider) changeRecord(action, fqdn, value string, ttl int) error {
 	hostedZoneID, err := r.getHostedZoneID(fqdn)
 	if err != nil {
 		return fmt.Errorf("failed to determine Route 53 hosted zone ID: %v", err)
 	}
+	fqdnLock.Lock(fqdn)
+	defer fqdnLock.Unlock(fqdn)
+	values, err := r.getRecord(hostedZoneID, fqdn)
+	if err != nil {
+		return err
+	}
+	if len(value) == 0 {
+		return nil
+	}
+	if len(values) == 1 && values[0] == value {
+		return r.changeRecord(route53.ChangeActionDelete, hostedZoneID, fqdn, values, route53TTL)
+	}
+	var newValues []string
+	for _, v := range values {
+		if v != value {
+			newValues = append(newValues, v)
+		}
+	}
+	if len(newValues) == len(values) {
+		return nil
+	}
+	return r.changeRecord(route53.ChangeActionUpsert, hostedZoneID, fqdn, newValues, route53TTL)
+}
 
-	recordSet := newTXTRecordSet(fqdn, value, ttl)
+func (r *DNSProvider) getRecord(hostedZoneID, fqdn string) ([]string, error) {
+	output, err := r.client.ListResourceRecordSets(&route53.ListResourceRecordSetsInput{
+		HostedZoneId:    aws.String(hostedZoneID),
+		MaxItems:        aws.String("1"),
+		StartRecordName: aws.String(fqdn),
+		StartRecordType: aws.String(route53.RRTypeTxt),
+	})
+	if err != nil {
+		return nil, fmt.Errorf("failed to retrieve Route 53 record set: %v", removeReqID(err))
+	}
+	if len(output.ResourceRecordSets) == 0 {
+		return nil, nil
+	}
+	var values []string
+	for _, rr := range output.ResourceRecordSets[0].ResourceRecords {
+		if rr.Value == nil {
+			continue
+		}
+		values = append(values, *rr.Value)
+	}
+	return values, nil
+}
+
+func (r *DNSProvider) changeRecord(action, hostedZoneID, fqdn string, values []string, ttl int) error {
+	recordSet := newTXTRecordSet(fqdn, values, ttl)
 	reqParams := &route53.ChangeResourceRecordSetsInput{
 		HostedZoneId: aws.String(hostedZoneID),
 		ChangeBatch: &route53.ChangeBatch{
@@ -279,16 +344,18 @@ func (r *DNSProvider) getHostedZoneID(fqdn string) (string, error) {
 	return hostedZoneID, nil
 }
 
-func newTXTRecordSet(fqdn, value string, ttl int) *route53.ResourceRecordSet {
+func newTXTRecordSet(fqdn string, values []string, ttl int) *route53.ResourceRecordSet {
+	var records []*route53.ResourceRecord
+	for _, v := range values {
+		records = append(records, &route53.ResourceRecord{
+			Value: aws.String(v),
+		})
+	}
 	return &route53.ResourceRecordSet{
-		Name:             aws.String(fqdn),
-		Type:             aws.String(route53.RRTypeTxt),
-		TTL:              aws.Int64(int64(ttl)),
-		MultiValueAnswer: aws.Bool(true),
-		SetIdentifier:    aws.String(value),
-		ResourceRecords: []*route53.ResourceRecord{
-			{Value: aws.String(value)},
-		},
+		Name:            aws.String(fqdn),
+		Type:            aws.String(route53.RRTypeTxt),
+		TTL:             aws.Int64(int64(ttl)),
+		ResourceRecords: records,
 	}
 }
 

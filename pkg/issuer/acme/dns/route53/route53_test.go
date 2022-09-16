@@ -14,6 +14,7 @@ import (
 	"net/http/httptest"
 	"os"
 	"testing"
+	"time"
 
 	logf "github.com/cert-manager/cert-manager/pkg/logs"
 
@@ -110,11 +111,25 @@ func TestNoRegionFromEnv(t *testing.T) {
 
 func TestRoute53Present(t *testing.T) {
 	mockResponses := MockResponseMap{
-		"/2013-04-01/hostedzonesbyname":         MockResponse{StatusCode: 200, Body: ListHostedZonesByNameResponse},
-		"/2013-04-01/hostedzone/ABCDEFG/rrset/": MockResponse{StatusCode: 200, Body: ChangeResourceRecordSetsResponse},
-		"/2013-04-01/hostedzone/HIJKLMN/rrset/": MockResponse{StatusCode: 200, Body: ChangeResourceRecordSetsResponse},
-		"/2013-04-01/change/123456":             MockResponse{StatusCode: 200, Body: GetChangeResponse},
-		"/2013-04-01/hostedzone/OPQRSTU/rrset/": MockResponse{StatusCode: 403, Body: ChangeResourceRecordSets403Response},
+		"GET /2013-04-01/hostedzonesbyname": MockResponse{StatusCode: 200, Body: ListHostedZonesByNameResponse},
+		"GET /2013-04-01/change/123456":     MockResponse{StatusCode: 200, Body: GetChangeResponse},
+
+		"GET /2013-04-01/hostedzone/ABCDEFG/rrset": MockResponse{StatusCode: 200, Body: ListResourceRecordSetsResponse},
+		"POST /2013-04-01/hostedzone/ABCDEFG/rrset/": MockResponse{
+			StatusCode: 200, ReqAction: "UPSERT", Body: ChangeResourceRecordSetsResponse,
+			ReqHasValues: []string{"existing-value", "123456d=="},
+		},
+		"GET /2013-04-01/hostedzone/HIJKLMN/rrset": MockResponse{StatusCode: 200, Body: ListResourceRecordSetsResponse},
+		"POST /2013-04-01/hostedzone/HIJKLMN/rrset/": MockResponse{
+			StatusCode: 200, ReqAction: "UPSERT", Body: ChangeResourceRecordSetsResponse,
+			ReqHasValues: []string{"existing-value", "123456d=="},
+		},
+		"GET /2013-04-01/hostedzone/OPQRSTU/rrset": MockResponse{StatusCode: 200, Body: ListResourceRecordSetsResponse},
+		"POST /2013-04-01/hostedzone/OPQRSTU/rrset/": MockResponse{
+			StatusCode: 403, Body: ChangeResourceRecordSets403Response,
+			ReqHasValues: []string{"existing-value", "123456d=="},
+		},
+		"GET /2013-04-01/hostedzone/VWXYZ/rrset": MockResponse{StatusCode: 403, Body: ListResourceRecordSets403Response},
 	}
 
 	ts := newMockServer(t, mockResponses)
@@ -141,12 +156,102 @@ func TestRoute53Present(t *testing.T) {
 	err = provider.Present(nonExistentDomain, nonExistentDomain+".", keyAuth)
 	assert.Error(t, err, "Expected Present to return an error")
 
-	// This test case makes sure that the request id has been properly
+	// These tests cases makes sure that the request id has been properly
 	// stripped off. It has to be stripped because it changes on every
 	// request which causes spurious challenge updates.
+
 	err = provider.Present("bar.example.com", "bar.example.com.", keyAuth)
 	require.Error(t, err, "Expected Present to return an error")
 	assert.Equal(t, `failed to change Route 53 record set: AccessDenied: User: arn:aws:iam::0123456789:user/test-cert-manager is not authorized to perform: route53:ChangeResourceRecordSets on resource: arn:aws:route53:::hostedzone/OPQRSTU`, err.Error())
+
+	err = provider.Present("baz.example.com", "baz.example.com.", keyAuth)
+	require.Error(t, err, "Expected Present to return an error")
+	assert.Equal(t, `failed to retrieve Route 53 record set: AccessDenied: User: arn:aws:iam::0123456789:user/test-cert-manager is not authorized to perform: route53:ListResourceRecordSets on resource: arn:aws:route53:::hostedzone/VWXYZ`, err.Error())
+}
+
+func TestRoute53Cleanup(t *testing.T) {
+	mockResponses := MockResponseMap{
+		"GET /2013-04-01/hostedzonesbyname": MockResponse{StatusCode: 200, Body: ListHostedZonesByNameResponse},
+		"GET /2013-04-01/change/123456":     MockResponse{StatusCode: 200, Body: GetChangeResponse},
+
+		"GET /2013-04-01/hostedzone/ABCDEFG/rrset": MockResponse{StatusCode: 200, Body: ListResourceRecordSetsResponse},
+		"POST /2013-04-01/hostedzone/ABCDEFG/rrset/": MockResponse{
+			StatusCode: 200, ReqAction: "DELETE", Body: ChangeResourceRecordSetsResponse,
+			ReqHasValues: []string{"existing-value"},
+		},
+		"GET /2013-04-01/hostedzone/HIJKLMN/rrset": MockResponse{StatusCode: 200, Body: ListResourceRecordSetsMultipleResponse},
+		"POST /2013-04-01/hostedzone/HIJKLMN/rrset/": MockResponse{
+			StatusCode: 200, ReqAction: "UPSERT", Body: ChangeResourceRecordSetsResponse,
+			ReqHasValues: []string{"existing-value2"}, ReqHasNoValues: []string{"existing-value"},
+		},
+		"GET /2013-04-01/hostedzone/OPQRSTU/rrset": MockResponse{StatusCode: 200, Body: ListResourceRecordSetsEmptyResponse},
+		"GET /2013-04-01/hostedzone/VWXYZ/rrset":   MockResponse{StatusCode: 200, Body: ListResourceRecordSetsResponse},
+	}
+
+	ts := newMockServer(t, mockResponses)
+	defer ts.Close()
+
+	provider, err := makeRoute53Provider(ts)
+	assert.NoError(t, err, "Expected to make a Route 53 provider without error")
+
+	domain := "example.com"
+	keyAuth := "existing-value"
+	err = provider.CleanUp(domain, "_acme-challenge."+domain+".", keyAuth)
+	assert.NoError(t, err, "Expected Present to return no error")
+
+	subDomain := "foo.example.com"
+	err = provider.CleanUp(subDomain, "_acme-challenge."+subDomain+".", keyAuth)
+	assert.NoError(t, err, "Expected Present to return no error")
+
+	subDomain = "bar.example.com"
+	err = provider.CleanUp(subDomain, "_acme-challenge."+subDomain+".", keyAuth)
+	assert.NoError(t, err, "Expected Present to return no error")
+
+	subDomain = "baz.example.com"
+	err = provider.CleanUp(subDomain, "_acme-challenge."+subDomain+".", "non-existing-value")
+	assert.NoError(t, err, "Expected Present to return no error")
+}
+
+func TestRoute53FQDNLocking(t *testing.T) {
+	// TODO: make this test more robust and avoid 100ms sleep
+
+	getChan := make(chan struct{})
+	postChan := make(chan struct{})
+	errCh1 := make(chan error)
+	errCh2 := make(chan error)
+	errCh3 := make(chan error)
+
+	mockResponses := MockResponseMap{
+		"GET /2013-04-01/hostedzonesbyname": MockResponse{StatusCode: 200, Body: ListHostedZonesByNameResponse},
+		"GET /2013-04-01/change/123456":     MockResponse{StatusCode: 200, Body: GetChangeResponse},
+
+		"GET /2013-04-01/hostedzone/ABCDEFG/rrset":   MockResponse{StatusCode: 200, Body: ListResourceRecordSetsResponse, Wait: getChan},
+		"POST /2013-04-01/hostedzone/ABCDEFG/rrset/": MockResponse{StatusCode: 200, Body: ChangeResourceRecordSetsResponse, Wait: postChan},
+	}
+
+	ts := newMockServer(t, mockResponses)
+	defer ts.Close()
+
+	provider, err := makeRoute53Provider(ts)
+	assert.NoError(t, err, "Expected to make a Route 53 provider without error")
+
+	go func() { errCh1 <- provider.Present("example.com", "_acme-challenge.example.com.", "1") }()
+	go func() { errCh2 <- provider.Present("example.com", "_acme-challenge.example.com.", "2") }()
+	go func() { errCh3 <- provider.CleanUp("example.com", "_acme-challenge.example.com.", "existing-value") }()
+
+	getChan <- struct{}{}
+	time.Sleep(100 * time.Millisecond)
+	select {
+	case getChan <- struct{}{}:
+		assert.Fail(t, "Expected lock on subsequent requests")
+	default:
+	}
+	close(getChan)
+	close(postChan)
+
+	assert.NoError(t, <-errCh1, "Expected Present(1) to return no error")
+	assert.NoError(t, <-errCh2, "Expected Present(2) to return no error")
+	assert.NoError(t, <-errCh3, "Expected CleanUp to return no error")
 }
 
 func TestAssumeRole(t *testing.T) {

@@ -50,12 +50,79 @@ var ListHostedZonesByNameResponse = `<?xml version="1.0" encoding="UTF-8"?>
          </Config>
          <ResourceRecordSetCount>10</ResourceRecordSetCount>
       </HostedZone>
+      <HostedZone>
+         <Id>/hostedzone/VWXYZ</Id>
+         <Name>baz.example.com.</Name>
+         <CallerReference>D2224C5B-684A-DB4A-BB9A-E09E3BAFEA7A</CallerReference>
+         <Config>
+            <Comment>Test comment</Comment>
+            <PrivateZone>false</PrivateZone>
+         </Config>
+         <ResourceRecordSetCount>10</ResourceRecordSetCount>
+      </HostedZone>
    </HostedZones>
    <IsTruncated>true</IsTruncated>
    <NextDNSName>example2.com</NextDNSName>
    <NextHostedZoneId>ZLT12321321124</NextHostedZoneId>
    <MaxItems>1</MaxItems>
 </ListHostedZonesByNameResponse>`
+
+var ListResourceRecordSetsResponse = `<?xml version="1.0" encoding="UTF-8"?>
+<ListResourceRecordSetsResponse>
+   <IsTruncated>false</IsTruncated>
+   <MaxItems>1</MaxItems>
+   <ResourceRecordSets>
+      <ResourceRecordSet>
+         <Name>SOME_URL</Name>
+         <ResourceRecords>
+            <ResourceRecord>
+               <Value>&#34;existing-value&#34;</Value>
+            </ResourceRecord>
+         </ResourceRecords>
+         <TTL>10</TTL>
+         <Type>TXT</Type>
+      </ResourceRecordSet>
+   </ResourceRecordSets>
+</ListResourceRecordSetsResponse>
+`
+
+var ListResourceRecordSetsMultipleResponse = `<?xml version="1.0" encoding="UTF-8"?>
+<ListResourceRecordSetsResponse>
+   <IsTruncated>false</IsTruncated>
+   <MaxItems>1</MaxItems>
+   <ResourceRecordSets>
+      <ResourceRecordSet>
+         <Name>SOME_URL</Name>
+         <ResourceRecords>
+            <ResourceRecord>
+               <Value>&#34;existing-value&#34;</Value>
+            </ResourceRecord>
+            <ResourceRecord>
+               <Value>&#34;existing-value2&#34;</Value>
+            </ResourceRecord>
+         </ResourceRecords>
+         <TTL>10</TTL>
+         <Type>TXT</Type>
+      </ResourceRecordSet>
+   </ResourceRecordSets>
+</ListResourceRecordSetsResponse>
+`
+
+var ListResourceRecordSetsEmptyResponse = `<?xml version="1.0" encoding="UTF-8"?>
+<ListResourceRecordSetsResponse>
+   <IsTruncated>false</IsTruncated>
+   <MaxItems>1</MaxItems>
+   <ResourceRecordSets>
+      <ResourceRecordSet>
+         <Name>SOME_URL</Name>
+         <ResourceRecords>
+         </ResourceRecords>
+         <TTL>10</TTL>
+         <Type>TXT</Type>
+      </ResourceRecordSet>
+   </ResourceRecordSets>
+</ListResourceRecordSetsResponse>
+`
 
 var GetChangeResponse = `<?xml version="1.0" encoding="UTF-8"?>
 <GetChangeResponse xmlns="https://route53.amazonaws.com/doc/2013-04-01/">
@@ -72,6 +139,16 @@ var ChangeResourceRecordSets403Response = `<?xml version="1.0"?>
     <Type>Sender</Type>
     <Code>AccessDenied</Code>
     <Message>User: arn:aws:iam::0123456789:user/test-cert-manager is not authorized to perform: route53:ChangeResourceRecordSets on resource: arn:aws:route53:::hostedzone/OPQRSTU</Message>
+  </Error>
+  <RequestId>SOMEREQUESTID</RequestId>
+</ErrorResponse>`
+
+var ListResourceRecordSets403Response = `<?xml version="1.0"?>
+<ErrorResponse xmlns="https://route53.amazonaws.com/doc/2013-04-01/">
+  <Error>
+    <Type>Sender</Type>
+    <Code>AccessDenied</Code>
+    <Message>User: arn:aws:iam::0123456789:user/test-cert-manager is not authorized to perform: route53:ListResourceRecordSets on resource: arn:aws:route53:::hostedzone/VWXYZ</Message>
   </Error>
   <RequestId>SOMEREQUESTID</RequestId>
 </ErrorResponse>`

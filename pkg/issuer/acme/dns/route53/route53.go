@@ -13,6 +13,8 @@ package route53
 import (
 	"fmt"
 	"strings"
+	"os"
+	"strconv"
 	"time"
 
 	logf "github.com/jetstack/cert-manager/pkg/logs"
@@ -65,7 +67,7 @@ func (d *sessionProvider) GetSession() (*session.Session, error) {
 
 	useAmbientCredentials := d.Ambient && (d.AccessKeyID == "" && d.SecretAccessKey == "")
 
-	config := aws.NewConfig()
+	config := retriesFromEnv(aws.NewConfig())
 	sessionOpts := session.Options{
 		Config: *config,
 	}
@@ -136,6 +138,20 @@ func newSessionProvider(accessKeyID, secretAccessKey, region, role string, ambie
 
 func defaultSTSProvider(sess *session.Session) stsiface.STSAPI {
 	return sts.New(sess)
+}
+
+// retriesFromEnv returns an aws.Config instance using environment 
+// variable AWS_MAX_ATTEMPTS to configure the retryer
+func retriesFromEnv(c *aws.Config) *aws.Config {
+	envMaxAttempts, ok := os.LookupEnv("AWS_MAX_ATTEMPTS")
+	if !ok {
+		return c
+	}
+
+	if retries, err := strconv.Atoi(envMaxAttempts); err == nil {
+		return c.WithMaxRetries(retries)
+	}
+	return c
 }
 
 // NewDNSProvider returns a DNSProvider instance configured for the AWS

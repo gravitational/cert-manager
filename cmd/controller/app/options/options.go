@@ -25,6 +25,10 @@ import (
 
 	"github.com/spf13/pflag"
 	"k8s.io/apimachinery/pkg/util/sets"
+	"k8s.io/component-base/logs"
+	logsapi "k8s.io/component-base/logs/api/v1"
+
+	_ "k8s.io/component-base/logs/json/register"
 
 	cmdutil "github.com/cert-manager/cert-manager/internal/cmd/util"
 	"github.com/cert-manager/cert-manager/internal/controller/feature"
@@ -59,6 +63,8 @@ import (
 )
 
 type ControllerOptions struct {
+	Logging *logs.Options
+
 	APIServerHost      string
 	Kubeconfig         string
 	KubernetesAPIQPS   float32
@@ -272,6 +278,7 @@ func NewControllerOptions() *ControllerOptions {
 		DNS01PropagationTime:              defaultDNS01PropagationTime,
 		EnablePprof:                       cmdutil.DefaultEnableProfiling,
 		PprofAddress:                      cmdutil.DefaultProfilerAddr,
+		Logging:                           logs.NewOptions(),
 	}
 }
 
@@ -415,6 +422,8 @@ func (s *ControllerOptions) AddFlags(fs *pflag.FlagSet) {
 	fs.DurationVar(&s.HealthzLeaderElectionTimeout, "internal-healthz-leader-election-timeout", defaultHealthzLeaderElectionTimeout, ""+
 		"Leader election healthz checks within this timeout period after the lease expires will still return healthy")
 	fs.MarkHidden("internal-healthz-leader-election-timeout")
+
+	logsapi.AddFlags(s.Logging, fs)
 }
 
 func (o *ControllerOptions) Validate() error {
@@ -453,6 +462,11 @@ func (o *ControllerOptions) Validate() error {
 		if !allControllersSet.Has(controller) {
 			errs = append(errs, fmt.Errorf("%q is not in the list of known controllers", controller))
 		}
+	}
+
+	err := logsapi.ValidateAndApply(o.Logging, nil)
+	if err != nil {
+		errs = append(errs, err)
 	}
 
 	if len(errs) > 0 {

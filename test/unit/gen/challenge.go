@@ -87,12 +87,6 @@ func SetChallengeSolver(s cmacme.ACMEChallengeSolver) ChallengeModifier {
 	}
 }
 
-func SetChallengeKey(k string) ChallengeModifier {
-	return func(ch *cmacme.Challenge) {
-		ch.Spec.Key = k
-	}
-}
-
 func SetChallengeCreationTimestamp(t time.Time) ChallengeModifier {
 	return func(ch *cmacme.Challenge) {
 		ch.CreationTimestamp.Time = t

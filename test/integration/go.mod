@@ -9,7 +9,7 @@ replace github.com/cert-manager/cert-manager/cmd/ctl => ../../cmd/ctl/
 replace github.com/cert-manager/cert-manager/webhook-binary => ../../cmd/webhook/
 
 require (
-	github.com/cert-manager/cert-manager v1.12.8
+	github.com/cert-manager/cert-manager v1.12.9
 	github.com/cert-manager/cert-manager/cmd/ctl v0.0.0-00010101000000-000000000000
 	github.com/go-logr/logr v1.3.0
 	github.com/miekg/dns v1.1.50
@@ -176,7 +176,7 @@ require (
 	google.golang.org/genproto/googleapis/api v0.0.0-20230822172742-b8732ec3820d // indirect
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20230822172742-b8732ec3820d // indirect
 	google.golang.org/grpc v1.59.0 // indirect
-	google.golang.org/protobuf v1.31.0 // indirect
+	google.golang.org/protobuf v1.33.0 // indirect
 	gopkg.in/inf.v0 v0.9.1 // indirect
 	gopkg.in/yaml.v2 v2.4.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect

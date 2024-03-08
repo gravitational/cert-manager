@@ -332,9 +332,9 @@ func buildControllerContextFactory(ctx context.Context, opts *config.ControllerC
 			HTTP01SolverNameservers: opts.ACMEHTTP01Config.SolverNameservers,
 
 			DNS01Nameservers:        nameservers,
-			DNS01CheckRetryPeriod:   opts.DNS01CheckRetryPeriod,
-			DNS01CheckAuthoritative: !opts.DNS01RecursiveNameserversOnly,
-			DNS01PropagationTime:    opts.DNS01PropagationTime,
+			DNS01CheckRetryPeriod:   opts.ACMEDNS01Config.CheckRetryPeriod,
+			DNS01CheckAuthoritative: !opts.ACMEDNS01Config.RecursiveNameserversOnly,
+			DNS01PropagationTime:    opts.ACMEDNS01Config.PropagationTime,
 
 			AccountRegistry: acmeAccountRegistry,
 		},

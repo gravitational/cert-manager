@@ -148,6 +148,7 @@ func autoConvert_v1alpha1_ACMEDNS01Config_To_controller_ACMEDNS01Config(in *v1al
 		return err
 	}
 	out.CheckRetryPeriod = time.Duration(in.CheckRetryPeriod)
+	out.PropagationTime = time.Duration(in.PropagationTime)
 	return nil
 }
 
@@ -162,6 +163,7 @@ func autoConvert_controller_ACMEDNS01Config_To_v1alpha1_ACMEDNS01Config(in *cont
 		return err
 	}
 	out.CheckRetryPeriod = time.Duration(in.CheckRetryPeriod)
+	out.PropagationTime = time.Duration(in.PropagationTime)
 	return nil
 }
 

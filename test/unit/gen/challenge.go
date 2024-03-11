@@ -17,6 +17,8 @@ limitations under the License.
 package gen
 
 import (
+	"time"
+
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	internalv1 "github.com/cert-manager/cert-manager/internal/apis/acme/v1"
@@ -80,6 +82,18 @@ func SetChallengeIssuer(o cmmeta.IssuerReference) ChallengeModifier {
 func SetChallengeDNSName(dnsName string) ChallengeModifier {
 	return func(ch *cmacme.Challenge) {
 		ch.Spec.DNSName = dnsName
+	}
+}
+
+func SetChallengeSolver(s cmacme.ACMEChallengeSolver) ChallengeModifier {
+	return func(ch *cmacme.Challenge) {
+		ch.Spec.Solver = s
+	}
+}
+
+func SetChallengeCreationTimestamp(t time.Time) ChallengeModifier {
+	return func(ch *cmacme.Challenge) {
+		ch.CreationTimestamp.Time = t
 	}
 }
 

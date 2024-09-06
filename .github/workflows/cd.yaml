@@ -57,7 +57,7 @@ jobs:
         with:
           # enable public repo only for tags
           images: |
-            name=${{ env.ECR_REPO }},enable=${{ github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v') }}
+            ${{ env.ECR_REPO }}
           flavor: |
             latest=false
           tags: |

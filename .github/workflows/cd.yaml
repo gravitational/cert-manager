@@ -1,0 +1,92 @@
+name: CI/CD
+on:
+  push:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    name: Test application
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4
+      - name: Setup Go
+        uses: actions/setup-go@0a12ed9d6a96ab950c8f026ed9f722fe0da7ef32 # v5
+        with:
+          go-version-file: go.mod
+          cache: true
+      - name: Run tests
+        run: make test RELEASE_VERSION=0.0.0
+  build-and-push:
+    name: Build and push Docker image
+    runs-on: ubuntu-latest
+    needs: [test]
+    env:
+      AWS_REGION_PUBLIC: us-east-1
+      AWS_ROLE: arn:aws:iam::146628656107:role/cert-manager-controller-github-action-ecr-role
+      # push images only for tags like vX.X.X-teleport
+      PUSH_IMAGE: ${{ (startsWith(github.ref, 'refs/tags/v') && contains(github.ref, 'teleport')) }}
+      ECR_REPO: public.ecr.aws/gravitational/cert-manager-controller
+    permissions:
+      contents: read
+      id-token: write # This is required for requesting the JWT, see https://github.com/aws-actions/configure-aws-credentials#OIDC
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Go
+        uses: actions/setup-go@0a12ed9d6a96ab950c8f026ed9f722fe0da7ef32 # v5
+        with:
+          go-version-file: go.mod
+          cache: true
+
+      - name: Configure AWS credentials for ECR Public
+        uses: aws-actions/configure-aws-credentials@e3dd6a429d7300a6a4c196c26e071d42e0343502 # v4
+        with:
+          aws-region: ${{ env.AWS_REGION_PUBLIC }}
+          role-to-assume: ${{ env.AWS_ROLE }}  
+        if: ${{ env.PUSH_IMAGE == 'true' }}
+
+      - name: Login to Amazon ECR Public
+        id: login-ecr-public
+        uses: aws-actions/amazon-ecr-login@062b18b96a7aff071d4dc91bc00c4c1a7945b076 # v2
+        with:
+          registry-type: public
+        if: ${{ env.PUSH_IMAGE == 'true' }}
+
+      - name: Prepare docker labels and tags
+        id: meta
+        uses: docker/metadata-action@8e5442c4ef9f78752691e2d8f8d19755c6f78e81 # v5
+        with:
+          images: |
+            ${{ env.ECR_REPO }}
+          flavor: |
+            latest=false
+          tags: |
+            type=sha,prefix={{branch}}-,suffix=-{{date 'YYYYMMDDTHHmmss'}},format=short,enable=${{ startsWith(github.ref, 'refs/heads/') }}
+            type=semver,pattern={{version}},enable=${{ github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v') }}
+  
+      - name: Build [and push] multiarch docker image
+        # because cert-manager build is not using buildx for simpler multiarch builds,
+        # but produces image per arch, we need to build them one by one and combine into multiarch-manifest
+        shell: bash
+        run: |
+          # https://docs.docker.com/reference/cli/docker/manifest/#create-and-push-a-manifest-list
+          for arch in amd64 arm64 s390x ppc64le arm; do
+            tag=${{ steps.meta.outputs.tags }}-$arch-linux
+            make _bin/containers/cert-manager-controller-linux-$arch.tar TAG=$tag
+
+            if [ "$PUSH_IMAGE" = "true" ]; then
+              docker push $tag
+              docker manifest create -a ${{ steps.meta.outputs.tags }} $tag
+            fi
+          done
+         
+          if [ "$PUSH_IMAGE" = "true" ]; then
+            docker manifest push ${{ steps.meta.outputs.tags }}
+          fi
+

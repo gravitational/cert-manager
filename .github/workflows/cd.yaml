@@ -44,14 +44,14 @@ jobs:
         with:
           aws-region: ${{ env.AWS_REGION_PUBLIC }}
           role-to-assume: ${{ env.AWS_ROLE }}  
-        if: ${{ env.PUSH_IMAGE }}
+        if: ${{ env.PUSH_IMAGE == 'true' }}
 
       - name: Login to Amazon ECR Public
         id: login-ecr-public
         uses: aws-actions/amazon-ecr-login@062b18b96a7aff071d4dc91bc00c4c1a7945b076 # v2
         with:
           registry-type: public
-        if: ${{ env.PUSH_IMAGE }}
+        if: ${{ env.PUSH_IMAGE == 'true' }}
 
       - name: Prepare docker labels and tags
         id: meta

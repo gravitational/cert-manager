@@ -6,6 +6,8 @@ jobs:
   test:
     name: Test application
     runs-on: ubuntu-latest
+    env:
+      RELEASE_VERSION: 0.0.0
     steps:
       - name: Checkout repo
         uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4

@@ -70,8 +70,8 @@ jobs:
         shell: bash
         run: |
           # https://docs.docker.com/reference/cli/docker/manifest/#create-and-push-a-manifest-list
-          for arch in amd64 arm64 s390x ppc64le arm;
-            tag=${{ steps.meta.outputs.tags }}-${arch}-linux
+          for arch in amd64 arm64 s390x ppc64le arm; do
+            tag=${{ steps.meta.outputs.tags }}-$arch-linux
             make _bin/containers/cert-manager-controller-linux-$arch.tar TAG=$tag
 
             if [ "$PUSH_IMAGE" = "true" ]; then

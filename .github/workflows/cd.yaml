@@ -86,7 +86,7 @@ jobs:
             fi
           done
          
-          if [ "$PUSH_IMAGE" = "true" ];
+          if [ "$PUSH_IMAGE" = "true" ]; then
             docker manifest push ${{ steps.meta.outputs.tags }}
           fi
 

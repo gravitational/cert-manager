@@ -18,7 +18,7 @@ jobs:
           go-version-file: go.mod
           cache: true
       - name: Run tests
-        run: make test RELEASE_VERSION=0.0.0
+        run: make test VERSION=0.0.0
   build-and-push:
     name: Build and push Docker image
     runs-on: ubuntu-latest

@@ -19,7 +19,6 @@ package shimhelper
 import (
 	"context"
 	"errors"
-	"fmt"
 	"testing"
 
 	"github.com/go-logr/logr"
@@ -36,7 +35,6 @@ import (
 	cmacme "github.com/cert-manager/cert-manager/pkg/apis/acme/v1"
 	cmapi "github.com/cert-manager/cert-manager/pkg/apis/certmanager/v1"
 	cmmeta "github.com/cert-manager/cert-manager/pkg/apis/meta/v1"
-	"github.com/cert-manager/cert-manager/pkg/controller"
 	controllerpkg "github.com/cert-manager/cert-manager/pkg/controller"
 	testpkg "github.com/cert-manager/cert-manager/pkg/controller/test"
 	"github.com/cert-manager/cert-manager/test/unit/gen"
@@ -130,7 +128,7 @@ func TestSync(t *testing.T) {
 						Labels: map[string]string{
 							"my-test-label": "should be copied",
 						},
-						OwnerReferences: buildIngressOwnerReferences("ingress-name", gen.DefaultTestNamespace),
+						OwnerReferences: buildIngressOwnerReferences("ingress-name"),
 					},
 					Spec: cmapi.CertificateSpec{
 						DNSNames:   []string{"example.com", "www.example.com"},
@@ -180,7 +178,7 @@ func TestSync(t *testing.T) {
 						Labels: map[string]string{
 							"my-test-label": "should be copied",
 						},
-						OwnerReferences: buildIngressOwnerReferences("ingress-name", gen.DefaultTestNamespace),
+						OwnerReferences: buildIngressOwnerReferences("ingress-name"),
 					},
 					Spec: cmapi.CertificateSpec{
 						DNSNames:    []string{"example.com", "www.example.com"},
@@ -231,7 +229,7 @@ func TestSync(t *testing.T) {
 						Labels: map[string]string{
 							"my-test-label": "should be copied",
 						},
-						OwnerReferences: buildIngressOwnerReferences("ingress-name", gen.DefaultTestNamespace),
+						OwnerReferences: buildIngressOwnerReferences("ingress-name"),
 					},
 					Spec: cmapi.CertificateSpec{
 						DNSNames:    []string{"example.com", "www.example.com"},
@@ -282,7 +280,7 @@ func TestSync(t *testing.T) {
 						Labels: map[string]string{
 							"my-test-label": "should be copied",
 						},
-						OwnerReferences: buildIngressOwnerReferences("ingress-name", gen.DefaultTestNamespace),
+						OwnerReferences: buildIngressOwnerReferences("ingress-name"),
 					},
 					Spec: cmapi.CertificateSpec{
 						DNSNames:    []string{"example.com", "www.example.com"},
@@ -337,7 +335,7 @@ func TestSync(t *testing.T) {
 							cmacme.ACMECertificateHTTP01IngressNameOverride: "ingress-name",
 							cmapi.IssueTemporaryCertificateAnnotation:       "true",
 						},
-						OwnerReferences: buildIngressOwnerReferences("ingress-name", gen.DefaultTestNamespace),
+						OwnerReferences: buildIngressOwnerReferences("ingress-name"),
 					},
 					Spec: cmapi.CertificateSpec{
 						DNSNames:   []string{"example.com", "www.example.com"},
@@ -390,7 +388,7 @@ func TestSync(t *testing.T) {
 							cmacme.ACMECertificateHTTP01IngressNameOverride: "ingress-name",
 							cmapi.IssueTemporaryCertificateAnnotation:       "true",
 						},
-						OwnerReferences: buildIngressOwnerReferences("ingress-name", gen.DefaultTestNamespace),
+						OwnerReferences: buildIngressOwnerReferences("ingress-name"),
 					},
 					Spec: cmapi.CertificateSpec{
 						DNSNames:   []string{"example.com", "www.example.com"},
@@ -432,7 +430,7 @@ func TestSync(t *testing.T) {
 					ObjectMeta: metav1.ObjectMeta{
 						Name:            "example-com-tls",
 						Namespace:       gen.DefaultTestNamespace,
-						OwnerReferences: buildIngressOwnerReferences("ingress-name", gen.DefaultTestNamespace),
+						OwnerReferences: buildIngressOwnerReferences("ingress-name"),
 					},
 					Spec: cmapi.CertificateSpec{
 						DNSNames:   []string{"example.com", "www.example.com"},
@@ -475,7 +473,7 @@ func TestSync(t *testing.T) {
 					ObjectMeta: metav1.ObjectMeta{
 						Name:            "example-com-tls",
 						Namespace:       gen.DefaultTestNamespace,
-						OwnerReferences: buildIngressOwnerReferences("ingress-name", gen.DefaultTestNamespace),
+						OwnerReferences: buildIngressOwnerReferences("ingress-name"),
 					},
 					Spec: cmapi.CertificateSpec{
 						DNSNames:   []string{"example.com", "www.example.com"},
@@ -519,7 +517,7 @@ func TestSync(t *testing.T) {
 					ObjectMeta: metav1.ObjectMeta{
 						Name:            "example-com-tls",
 						Namespace:       gen.DefaultTestNamespace,
-						OwnerReferences: buildIngressOwnerReferences("ingress-name", gen.DefaultTestNamespace),
+						OwnerReferences: buildIngressOwnerReferences("ingress-name"),
 						Annotations: map[string]string{
 							cmacme.ACMECertificateHTTP01IngressClassOverride: "cert-ing",
 						},
@@ -535,6 +533,105 @@ func TestSync(t *testing.T) {
 					},
 				},
 			},
+		},
+		{
+			Name:   "return a single HTTP01 Certificate for an ingress with a single valid TLS entry and valid secret template annotation",
+			Issuer: acmeClusterIssuer,
+			IngressLike: &networkingv1.Ingress{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "ingress-name",
+					Namespace: gen.DefaultTestNamespace,
+					Annotations: map[string]string{
+						cmapi.IngressClusterIssuerNameAnnotationKey: "issuer-name",
+						cmapi.IngressSecretTemplate:                 `{ "annotations": { "example-annotation" : "dummy-value" }, "labels": { "example-label" : "dummy-value" } }`,
+					},
+					UID: types.UID("ingress-name"),
+				},
+				Spec: networkingv1.IngressSpec{
+					TLS: []networkingv1.IngressTLS{
+						{
+							Hosts:      []string{"example.com", "www.example.com"},
+							SecretName: "example-com-tls",
+						},
+					},
+				},
+			},
+			ClusterIssuerLister: []runtime.Object{acmeClusterIssuer},
+			ExpectedEvents:      []string{`Normal CreateCertificate Successfully created Certificate "example-com-tls"`},
+			ExpectedCreate: []*cmapi.Certificate{
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:            "example-com-tls",
+						Namespace:       gen.DefaultTestNamespace,
+						OwnerReferences: buildIngressOwnerReferences("ingress-name"),
+					},
+					Spec: cmapi.CertificateSpec{
+						DNSNames:   []string{"example.com", "www.example.com"},
+						SecretName: "example-com-tls",
+						SecretTemplate: &cmapi.CertificateSecretTemplate{
+							Annotations: map[string]string{
+								"example-annotation": "dummy-value",
+							},
+							Labels: map[string]string{
+								"example-label": "dummy-value",
+							},
+						},
+						IssuerRef: cmmeta.ObjectReference{
+							Name: "issuer-name",
+							Kind: "ClusterIssuer",
+						},
+						Usages: cmapi.DefaultKeyUsages(),
+					},
+				},
+			},
+		},
+		{
+			Name:   "secret template annotation should not allow cert-manager.io/ annotations",
+			Issuer: acmeClusterIssuer,
+			IngressLike: &networkingv1.Ingress{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "ingress-name",
+					Namespace: gen.DefaultTestNamespace,
+					Annotations: map[string]string{
+						cmapi.IngressClusterIssuerNameAnnotationKey: "issuer-name",
+						cmapi.IngressSecretTemplate:                 `{ "annotations": { "cert-manager.io/disallowed-annotation" : "dummy-value" } }`,
+					},
+					UID: types.UID("ingress-name"),
+				},
+				Spec: networkingv1.IngressSpec{
+					TLS: []networkingv1.IngressTLS{
+						{
+							Hosts:      []string{"example.com", "www.example.com"},
+							SecretName: "example-com-tls",
+						},
+					},
+				},
+			},
+			Err: true,
+		},
+		{
+			Name:   "secret template annotation should not allow unknown fields",
+			Issuer: acmeClusterIssuer,
+			IngressLike: &networkingv1.Ingress{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "ingress-name",
+					Namespace: gen.DefaultTestNamespace,
+					Annotations: map[string]string{
+						cmapi.IngressClusterIssuerNameAnnotationKey: "issuer-name",
+						cmapi.IngressSecretTemplate:                 `{ "unknown-field": "true" }`,
+					},
+					UID: types.UID("ingress-name"),
+				},
+				Spec: networkingv1.IngressSpec{
+					TLS: []networkingv1.IngressTLS{
+						{
+							Hosts:      []string{"example.com", "www.example.com"},
+							SecretName: "example-com-tls",
+						},
+					},
+				},
+			},
+			Err: true,
 		},
 		{
 			Name:   "edit-in-place set to false should not trigger editing the ingress in-place",
@@ -566,7 +663,7 @@ func TestSync(t *testing.T) {
 					ObjectMeta: metav1.ObjectMeta{
 						Name:            "example-com-tls",
 						Namespace:       gen.DefaultTestNamespace,
-						OwnerReferences: buildIngressOwnerReferences("ingress-name", gen.DefaultTestNamespace),
+						OwnerReferences: buildIngressOwnerReferences("ingress-name"),
 					},
 					Spec: cmapi.CertificateSpec{
 						DNSNames:   []string{"example.com", "www.example.com"},
@@ -608,7 +705,7 @@ func TestSync(t *testing.T) {
 					ObjectMeta: metav1.ObjectMeta{
 						Name:            "example-com-tls",
 						Namespace:       gen.DefaultTestNamespace,
-						OwnerReferences: buildIngressOwnerReferences("ingress-name", gen.DefaultTestNamespace),
+						OwnerReferences: buildIngressOwnerReferences("ingress-name"),
 					},
 					Spec: cmapi.CertificateSpec{
 						DNSNames:   []string{"example.com", "www.example.com"},
@@ -653,7 +750,7 @@ func TestSync(t *testing.T) {
 					ObjectMeta: metav1.ObjectMeta{
 						Name:            "example-com-tls",
 						Namespace:       gen.DefaultTestNamespace,
-						OwnerReferences: buildIngressOwnerReferences("ingress-name", gen.DefaultTestNamespace),
+						OwnerReferences: buildIngressOwnerReferences("ingress-name"),
 					},
 					Spec: cmapi.CertificateSpec{
 						DNSNames:   []string{"example.com", "www.example.com"},
@@ -702,7 +799,7 @@ func TestSync(t *testing.T) {
 					ObjectMeta: metav1.ObjectMeta{
 						Name:            "example-com-tls",
 						Namespace:       gen.DefaultTestNamespace,
-						OwnerReferences: buildIngressOwnerReferences("ingress-name", gen.DefaultTestNamespace),
+						OwnerReferences: buildIngressOwnerReferences("ingress-name"),
 					},
 					Spec: cmapi.CertificateSpec{
 						DNSNames:   []string{"example.com", "www.example.com"},
@@ -751,7 +848,7 @@ func TestSync(t *testing.T) {
 					ObjectMeta: metav1.ObjectMeta{
 						Name:            "example-com-tls",
 						Namespace:       gen.DefaultTestNamespace,
-						OwnerReferences: buildIngressOwnerReferences("ingress-name", gen.DefaultTestNamespace),
+						OwnerReferences: buildIngressOwnerReferences("ingress-name"),
 					},
 					Spec: cmapi.CertificateSpec{
 						DNSNames:   []string{"example.com", "www.example.com"},
@@ -807,7 +904,7 @@ func TestSync(t *testing.T) {
 					ObjectMeta: metav1.ObjectMeta{
 						Name:            "existing-crt",
 						Namespace:       gen.DefaultTestNamespace,
-						OwnerReferences: buildIngressOwnerReferences("ingress-name", gen.DefaultTestNamespace),
+						OwnerReferences: buildIngressOwnerReferences("ingress-name"),
 					},
 					Spec: cmapi.CertificateSpec{
 						DNSNames:   []string{"example.com"},
@@ -847,7 +944,7 @@ func TestSync(t *testing.T) {
 			CertificateLister: []runtime.Object{
 				buildCertificate("existing-crt",
 					gen.DefaultTestNamespace,
-					buildIngressOwnerReferences("ingress-name", gen.DefaultTestNamespace),
+					buildIngressOwnerReferences("ingress-name"),
 				),
 			},
 			DefaultIssuerKind: "Issuer",
@@ -857,7 +954,7 @@ func TestSync(t *testing.T) {
 					ObjectMeta: metav1.ObjectMeta{
 						Name:            "existing-crt",
 						Namespace:       gen.DefaultTestNamespace,
-						OwnerReferences: buildIngressOwnerReferences("ingress-name", gen.DefaultTestNamespace),
+						OwnerReferences: buildIngressOwnerReferences("ingress-name"),
 					},
 					Spec: cmapi.CertificateSpec{
 						DNSNames:   []string{"example.com"},
@@ -905,7 +1002,7 @@ func TestSync(t *testing.T) {
 						Labels: map[string]string{
 							"a-different-value": "should be removed",
 						},
-						OwnerReferences: buildIngressOwnerReferences("ingress-name", gen.DefaultTestNamespace),
+						OwnerReferences: buildIngressOwnerReferences("ingress-name"),
 					},
 					Spec: cmapi.CertificateSpec{
 						DNSNames:   []string{"example.com"},
@@ -927,7 +1024,7 @@ func TestSync(t *testing.T) {
 						Labels: map[string]string{
 							"my-test-label": "should be copied",
 						},
-						OwnerReferences: buildIngressOwnerReferences("ingress-name", gen.DefaultTestNamespace),
+						OwnerReferences: buildIngressOwnerReferences("ingress-name"),
 					},
 					Spec: cmapi.CertificateSpec{
 						DNSNames:   []string{"example.com"},
@@ -970,7 +1067,7 @@ func TestSync(t *testing.T) {
 					ObjectMeta: metav1.ObjectMeta{
 						Name:            "cert-secret-name",
 						Namespace:       gen.DefaultTestNamespace,
-						OwnerReferences: buildIngressOwnerReferences("ingress-name", gen.DefaultTestNamespace),
+						OwnerReferences: buildIngressOwnerReferences("ingress-name"),
 					},
 					Spec: cmapi.CertificateSpec{
 						DNSNames:   []string{"example.com"},
@@ -990,7 +1087,7 @@ func TestSync(t *testing.T) {
 					ObjectMeta: metav1.ObjectMeta{
 						Name:            "cert-secret-name",
 						Namespace:       gen.DefaultTestNamespace,
-						OwnerReferences: buildIngressOwnerReferences("ingress-name", gen.DefaultTestNamespace),
+						OwnerReferences: buildIngressOwnerReferences("ingress-name"),
 					},
 					Spec: cmapi.CertificateSpec{
 						DNSNames:   []string{"example.com"},
@@ -1035,7 +1132,7 @@ func TestSync(t *testing.T) {
 					ObjectMeta: metav1.ObjectMeta{
 						Name:            "cert-secret-name",
 						Namespace:       gen.DefaultTestNamespace,
-						OwnerReferences: buildIngressOwnerReferences("ingress-name", gen.DefaultTestNamespace),
+						OwnerReferences: buildIngressOwnerReferences("ingress-name"),
 					},
 					Spec: cmapi.CertificateSpec{
 						DNSNames:   []string{"example.com"},
@@ -1058,7 +1155,7 @@ func TestSync(t *testing.T) {
 					ObjectMeta: metav1.ObjectMeta{
 						Name:            "cert-secret-name",
 						Namespace:       gen.DefaultTestNamespace,
-						OwnerReferences: buildIngressOwnerReferences("ingress-name", gen.DefaultTestNamespace),
+						OwnerReferences: buildIngressOwnerReferences("ingress-name"),
 					},
 					Spec: cmapi.CertificateSpec{
 						DNSNames:   []string{"example.com"},
@@ -1106,7 +1203,7 @@ func TestSync(t *testing.T) {
 					ObjectMeta: metav1.ObjectMeta{
 						Name:            "cert-secret-name",
 						Namespace:       gen.DefaultTestNamespace,
-						OwnerReferences: buildIngressOwnerReferences("ingress-name", gen.DefaultTestNamespace),
+						OwnerReferences: buildIngressOwnerReferences("ingress-name"),
 					},
 					Spec: cmapi.CertificateSpec{
 						DNSNames:   []string{"example.com"},
@@ -1129,7 +1226,7 @@ func TestSync(t *testing.T) {
 					ObjectMeta: metav1.ObjectMeta{
 						Name:            "cert-secret-name",
 						Namespace:       gen.DefaultTestNamespace,
-						OwnerReferences: buildIngressOwnerReferences("ingress-name", gen.DefaultTestNamespace),
+						OwnerReferences: buildIngressOwnerReferences("ingress-name"),
 					},
 					Spec: cmapi.CertificateSpec{
 						DNSNames:   []string{"example.com"},
@@ -1178,7 +1275,7 @@ func TestSync(t *testing.T) {
 					ObjectMeta: metav1.ObjectMeta{
 						Name:            "cert-secret-name",
 						Namespace:       gen.DefaultTestNamespace,
-						OwnerReferences: buildIngressOwnerReferences("ingress-name", gen.DefaultTestNamespace),
+						OwnerReferences: buildIngressOwnerReferences("ingress-name"),
 					},
 					Spec: cmapi.CertificateSpec{
 						DNSNames:   []string{"example.com"},
@@ -1201,7 +1298,7 @@ func TestSync(t *testing.T) {
 					ObjectMeta: metav1.ObjectMeta{
 						Name:            "cert-secret-name",
 						Namespace:       gen.DefaultTestNamespace,
-						OwnerReferences: buildIngressOwnerReferences("ingress-name", gen.DefaultTestNamespace),
+						OwnerReferences: buildIngressOwnerReferences("ingress-name"),
 					},
 					Spec: cmapi.CertificateSpec{
 						DNSNames:   []string{"example.com"},
@@ -1252,7 +1349,7 @@ func TestSync(t *testing.T) {
 					ObjectMeta: metav1.ObjectMeta{
 						Name:            "cert-secret-name",
 						Namespace:       gen.DefaultTestNamespace,
-						OwnerReferences: buildIngressOwnerReferences("ingress-name", gen.DefaultTestNamespace),
+						OwnerReferences: buildIngressOwnerReferences("ingress-name"),
 					},
 					Spec: cmapi.CertificateSpec{
 						DNSNames:   []string{"example.com"},
@@ -1275,7 +1372,7 @@ func TestSync(t *testing.T) {
 					ObjectMeta: metav1.ObjectMeta{
 						Name:            "cert-secret-name",
 						Namespace:       gen.DefaultTestNamespace,
-						OwnerReferences: buildIngressOwnerReferences("ingress-name", gen.DefaultTestNamespace),
+						OwnerReferences: buildIngressOwnerReferences("ingress-name"),
 					},
 					Spec: cmapi.CertificateSpec{
 						DNSNames:   []string{"example.com"},
@@ -1365,7 +1462,7 @@ func TestSync(t *testing.T) {
 					ObjectMeta: metav1.ObjectMeta{
 						Name:            "existing-crt",
 						Namespace:       gen.DefaultTestNamespace,
-						OwnerReferences: buildIngressOwnerReferences("not-ingress-name", gen.DefaultTestNamespace),
+						OwnerReferences: buildIngressOwnerReferences("not-ingress-name"),
 					},
 					Spec: cmapi.CertificateSpec{
 						DNSNames:   []string{"example.com"},
@@ -1398,7 +1495,7 @@ func TestSync(t *testing.T) {
 					ObjectMeta: metav1.ObjectMeta{
 						Name:            "existing-crt",
 						Namespace:       gen.DefaultTestNamespace,
-						OwnerReferences: buildIngressOwnerReferences("ingress-name", gen.DefaultTestNamespace),
+						OwnerReferences: buildIngressOwnerReferences("ingress-name"),
 					},
 					Spec: cmapi.CertificateSpec{
 						DNSNames:   []string{"example.com"},
@@ -1417,7 +1514,7 @@ func TestSync(t *testing.T) {
 					ObjectMeta: metav1.ObjectMeta{
 						Name:            "existing-crt",
 						Namespace:       gen.DefaultTestNamespace,
-						OwnerReferences: buildIngressOwnerReferences("ingress-name", gen.DefaultTestNamespace),
+						OwnerReferences: buildIngressOwnerReferences("ingress-name"),
 					},
 					Spec: cmapi.CertificateSpec{
 						DNSNames:   []string{"example.com"},
@@ -1459,7 +1556,7 @@ func TestSync(t *testing.T) {
 					ObjectMeta: metav1.ObjectMeta{
 						Name:            "example-com-tls",
 						Namespace:       gen.DefaultTestNamespace,
-						OwnerReferences: buildIngressOwnerReferences("ingress-name", gen.DefaultTestNamespace),
+						OwnerReferences: buildIngressOwnerReferences("ingress-name"),
 					},
 					Spec: cmapi.CertificateSpec{
 						DNSNames:   []string{"example.com"},
@@ -1480,7 +1577,7 @@ func TestSync(t *testing.T) {
 					ObjectMeta: metav1.ObjectMeta{
 						Name:            "example-com-tls",
 						Namespace:       gen.DefaultTestNamespace,
-						OwnerReferences: buildIngressOwnerReferences("ingress-name", gen.DefaultTestNamespace),
+						OwnerReferences: buildIngressOwnerReferences("ingress-name"),
 					},
 					Spec: cmapi.CertificateSpec{
 						DNSNames:   []string{"example.com"},
@@ -1594,7 +1691,7 @@ func TestSync(t *testing.T) {
 						Labels: map[string]string{
 							"my-test-label": "should be copied",
 						},
-						OwnerReferences: buildIngressOwnerReferences("ingress-name", gen.DefaultTestNamespace),
+						OwnerReferences: buildIngressOwnerReferences("ingress-name"),
 					},
 					Spec: cmapi.CertificateSpec{
 						DNSNames:   []string{"example.com", "www.example.com"},
@@ -1649,7 +1746,7 @@ func TestSync(t *testing.T) {
 						Labels: map[string]string{
 							"my-test-label": "should be copied",
 						},
-						OwnerReferences: buildIngressOwnerReferences("ingress-name", gen.DefaultTestNamespace),
+						OwnerReferences: buildIngressOwnerReferences("ingress-name"),
 					},
 					Spec: cmapi.CertificateSpec{
 						DNSNames:   []string{"example.com", "www.example.com"},
@@ -1726,7 +1823,7 @@ func TestSync(t *testing.T) {
 						Labels: map[string]string{
 							"my-test-label": "should be copied",
 						},
-						OwnerReferences: buildGatewayOwnerReferences("gateway-name", gen.DefaultTestNamespace),
+						OwnerReferences: buildGatewayOwnerReferences("gateway-name"),
 					},
 					Spec: cmapi.CertificateSpec{
 						DNSNames:   []string{"example.com"},
@@ -1788,7 +1885,7 @@ func TestSync(t *testing.T) {
 						Labels: map[string]string{
 							"my-test-label": "should be copied",
 						},
-						OwnerReferences: buildGatewayOwnerReferences("gateway-name", gen.DefaultTestNamespace),
+						OwnerReferences: buildGatewayOwnerReferences("gateway-name"),
 					},
 					Spec: cmapi.CertificateSpec{
 						DNSNames:   []string{"example.com"},
@@ -1852,7 +1949,7 @@ func TestSync(t *testing.T) {
 							cmacme.ACMECertificateHTTP01IngressNameOverride: "gateway-name",
 							cmapi.IssueTemporaryCertificateAnnotation:       "true",
 						},
-						OwnerReferences: buildGatewayOwnerReferences("gateway-name", gen.DefaultTestNamespace),
+						OwnerReferences: buildGatewayOwnerReferences("gateway-name"),
 					},
 					Spec: cmapi.CertificateSpec{
 						DNSNames:   []string{"example.com"},
@@ -1915,7 +2012,7 @@ func TestSync(t *testing.T) {
 							cmacme.ACMECertificateHTTP01IngressNameOverride: "gateway-name",
 							cmapi.IssueTemporaryCertificateAnnotation:       "true",
 						},
-						OwnerReferences: buildGatewayOwnerReferences("gateway-name", gen.DefaultTestNamespace),
+						OwnerReferences: buildGatewayOwnerReferences("gateway-name"),
 					},
 					Spec: cmapi.CertificateSpec{
 						DNSNames:   []string{"example.com"},
@@ -1967,7 +2064,7 @@ func TestSync(t *testing.T) {
 					ObjectMeta: metav1.ObjectMeta{
 						Name:            "example-com-tls",
 						Namespace:       gen.DefaultTestNamespace,
-						OwnerReferences: buildGatewayOwnerReferences("gateway-name", gen.DefaultTestNamespace),
+						OwnerReferences: buildGatewayOwnerReferences("gateway-name"),
 					},
 					Spec: cmapi.CertificateSpec{
 						DNSNames:   []string{"example.com"},
@@ -2020,7 +2117,7 @@ func TestSync(t *testing.T) {
 					ObjectMeta: metav1.ObjectMeta{
 						Name:            "example-com-tls",
 						Namespace:       gen.DefaultTestNamespace,
-						OwnerReferences: buildGatewayOwnerReferences("gateway-name", gen.DefaultTestNamespace),
+						OwnerReferences: buildGatewayOwnerReferences("gateway-name"),
 					},
 					Spec: cmapi.CertificateSpec{
 						DNSNames:   []string{"example.com"},
@@ -2074,7 +2171,7 @@ func TestSync(t *testing.T) {
 					ObjectMeta: metav1.ObjectMeta{
 						Name:            "example-com-tls",
 						Namespace:       gen.DefaultTestNamespace,
-						OwnerReferences: buildGatewayOwnerReferences("gateway-name", gen.DefaultTestNamespace),
+						OwnerReferences: buildGatewayOwnerReferences("gateway-name"),
 						Annotations: map[string]string{
 							cmacme.ACMECertificateHTTP01IngressClassOverride: "cert-ing",
 						},
@@ -2131,7 +2228,7 @@ func TestSync(t *testing.T) {
 					ObjectMeta: metav1.ObjectMeta{
 						Name:            "example-com-tls",
 						Namespace:       gen.DefaultTestNamespace,
-						OwnerReferences: buildGatewayOwnerReferences("gateway-name", gen.DefaultTestNamespace),
+						OwnerReferences: buildGatewayOwnerReferences("gateway-name"),
 					},
 					Spec: cmapi.CertificateSpec{
 						DNSNames:   []string{"example.com"},
@@ -2183,7 +2280,7 @@ func TestSync(t *testing.T) {
 					ObjectMeta: metav1.ObjectMeta{
 						Name:            "example-com-tls",
 						Namespace:       gen.DefaultTestNamespace,
-						OwnerReferences: buildGatewayOwnerReferences("gateway-name", gen.DefaultTestNamespace),
+						OwnerReferences: buildGatewayOwnerReferences("gateway-name"),
 					},
 					Spec: cmapi.CertificateSpec{
 						DNSNames:   []string{"example.com"},
@@ -2288,7 +2385,7 @@ func TestSync(t *testing.T) {
 					ObjectMeta: metav1.ObjectMeta{
 						Name:            "example-com-tls",
 						Namespace:       gen.DefaultTestNamespace,
-						OwnerReferences: buildGatewayOwnerReferences("gateway-name", gen.DefaultTestNamespace),
+						OwnerReferences: buildGatewayOwnerReferences("gateway-name"),
 					},
 					Spec: cmapi.CertificateSpec{
 						DNSNames:   []string{"example.com"},
@@ -2351,7 +2448,7 @@ func TestSync(t *testing.T) {
 					ObjectMeta: metav1.ObjectMeta{
 						Name:            "example-com-tls",
 						Namespace:       gen.DefaultTestNamespace,
-						OwnerReferences: buildGatewayOwnerReferences("gateway-name", gen.DefaultTestNamespace),
+						OwnerReferences: buildGatewayOwnerReferences("gateway-name"),
 					},
 					Spec: cmapi.CertificateSpec{
 						DNSNames:   []string{"www.example.com"},
@@ -2417,7 +2514,7 @@ func TestSync(t *testing.T) {
 					ObjectMeta: metav1.ObjectMeta{
 						Name:            "existing-crt",
 						Namespace:       gen.DefaultTestNamespace,
-						OwnerReferences: buildGatewayOwnerReferences("gateway-name", gen.DefaultTestNamespace),
+						OwnerReferences: buildGatewayOwnerReferences("gateway-name"),
 					},
 					Spec: cmapi.CertificateSpec{
 						DNSNames:   []string{"example.com"},
@@ -2467,7 +2564,7 @@ func TestSync(t *testing.T) {
 			CertificateLister: []runtime.Object{
 				buildCertificate("existing-crt",
 					gen.DefaultTestNamespace,
-					buildGatewayOwnerReferences("gateway-name", gen.DefaultTestNamespace),
+					buildGatewayOwnerReferences("gateway-name"),
 				),
 			},
 			DefaultIssuerKind: "Issuer",
@@ -2477,7 +2574,7 @@ func TestSync(t *testing.T) {
 					ObjectMeta: metav1.ObjectMeta{
 						Name:            "existing-crt",
 						Namespace:       gen.DefaultTestNamespace,
-						OwnerReferences: buildGatewayOwnerReferences("gateway-name", gen.DefaultTestNamespace),
+						OwnerReferences: buildGatewayOwnerReferences("gateway-name"),
 					},
 					Spec: cmapi.CertificateSpec{
 						DNSNames:   []string{"example.com"},
@@ -2535,7 +2632,7 @@ func TestSync(t *testing.T) {
 						Labels: map[string]string{
 							"a-different-value": "should be removed",
 						},
-						OwnerReferences: buildGatewayOwnerReferences("gateway-name", gen.DefaultTestNamespace),
+						OwnerReferences: buildGatewayOwnerReferences("gateway-name"),
 					},
 					Spec: cmapi.CertificateSpec{
 						DNSNames:   []string{"example.com"},
@@ -2557,7 +2654,7 @@ func TestSync(t *testing.T) {
 						Labels: map[string]string{
 							"my-test-label": "should be copied",
 						},
-						OwnerReferences: buildGatewayOwnerReferences("gateway-name", gen.DefaultTestNamespace),
+						OwnerReferences: buildGatewayOwnerReferences("gateway-name"),
 					},
 					Spec: cmapi.CertificateSpec{
 						DNSNames:   []string{"example.com"},
@@ -2661,7 +2758,7 @@ func TestSync(t *testing.T) {
 					ObjectMeta: metav1.ObjectMeta{
 						Name:            "existing-crt",
 						Namespace:       gen.DefaultTestNamespace,
-						OwnerReferences: buildIngressOwnerReferences("not-gateway-name", gen.DefaultTestNamespace),
+						OwnerReferences: buildIngressOwnerReferences("not-gateway-name"),
 					},
 					Spec: cmapi.CertificateSpec{
 						DNSNames:   []string{"example.com"},
@@ -2694,7 +2791,7 @@ func TestSync(t *testing.T) {
 					ObjectMeta: metav1.ObjectMeta{
 						Name:            "existing-crt",
 						Namespace:       gen.DefaultTestNamespace,
-						OwnerReferences: buildGatewayOwnerReferences("gateway-name", gen.DefaultTestNamespace),
+						OwnerReferences: buildGatewayOwnerReferences("gateway-name"),
 					},
 					Spec: cmapi.CertificateSpec{
 						DNSNames:   []string{"example.com"},
@@ -2713,7 +2810,7 @@ func TestSync(t *testing.T) {
 					ObjectMeta: metav1.ObjectMeta{
 						Name:            "existing-crt",
 						Namespace:       gen.DefaultTestNamespace,
-						OwnerReferences: buildGatewayOwnerReferences("gateway-name", gen.DefaultTestNamespace),
+						OwnerReferences: buildGatewayOwnerReferences("gateway-name"),
 					},
 					Spec: cmapi.CertificateSpec{
 						DNSNames:   []string{"example.com"},
@@ -2765,7 +2862,7 @@ func TestSync(t *testing.T) {
 					ObjectMeta: metav1.ObjectMeta{
 						Name:            "example-com-tls",
 						Namespace:       gen.DefaultTestNamespace,
-						OwnerReferences: buildGatewayOwnerReferences("gateway-name", gen.DefaultTestNamespace),
+						OwnerReferences: buildGatewayOwnerReferences("gateway-name"),
 					},
 					Spec: cmapi.CertificateSpec{
 						DNSNames:   []string{"example.com"},
@@ -2786,7 +2883,7 @@ func TestSync(t *testing.T) {
 					ObjectMeta: metav1.ObjectMeta{
 						Name:            "example-com-tls",
 						Namespace:       gen.DefaultTestNamespace,
-						OwnerReferences: buildGatewayOwnerReferences("gateway-name", gen.DefaultTestNamespace),
+						OwnerReferences: buildGatewayOwnerReferences("gateway-name"),
 					},
 					Spec: cmapi.CertificateSpec{
 						DNSNames:   []string{"example.com"},
@@ -2871,7 +2968,7 @@ func TestSync(t *testing.T) {
 					ObjectMeta: metav1.ObjectMeta{
 						Name:            "example-com-tls",
 						Namespace:       gen.DefaultTestNamespace,
-						OwnerReferences: buildGatewayOwnerReferences("gateway-name", gen.DefaultTestNamespace),
+						OwnerReferences: buildGatewayOwnerReferences("gateway-name"),
 					},
 					Spec: cmapi.CertificateSpec{
 						DNSNames:   []string{"example.com", "www.example.com", "foo.example.com"},
@@ -2943,7 +3040,7 @@ func TestSync(t *testing.T) {
 					ObjectMeta: metav1.ObjectMeta{
 						Name:            "foo-example-com-tls",
 						Namespace:       gen.DefaultTestNamespace,
-						OwnerReferences: buildGatewayOwnerReferences("gateway-name", gen.DefaultTestNamespace),
+						OwnerReferences: buildGatewayOwnerReferences("gateway-name"),
 					},
 					Spec: cmapi.CertificateSpec{
 						DNSNames:   []string{"foo.example.com"},
@@ -2960,7 +3057,7 @@ func TestSync(t *testing.T) {
 					ObjectMeta: metav1.ObjectMeta{
 						Name:            "bar-example-com-tls",
 						Namespace:       gen.DefaultTestNamespace,
-						OwnerReferences: buildGatewayOwnerReferences("gateway-name", gen.DefaultTestNamespace),
+						OwnerReferences: buildGatewayOwnerReferences("gateway-name"),
 					},
 					Spec: cmapi.CertificateSpec{
 						DNSNames:   []string{"bar.example.com"},
@@ -3057,7 +3154,7 @@ func TestSync(t *testing.T) {
 						Labels: map[string]string{
 							"my-test-label": "should be copied",
 						},
-						OwnerReferences: buildGatewayOwnerReferences("gateway-name", gen.DefaultTestNamespace),
+						OwnerReferences: buildGatewayOwnerReferences("gateway-name"),
 					},
 					Spec: cmapi.CertificateSpec{
 						DNSNames:   []string{"example.com"},
@@ -3128,7 +3225,7 @@ func TestSync(t *testing.T) {
 			}
 			b.Init()
 			defer b.Stop()
-			sync := SyncFnFor(b.Recorder, logr.Discard(), b.CMClient, b.SharedInformerFactory.Certmanager().V1().Certificates().Lister(), controller.IngressShimOptions{
+			sync := SyncFnFor(b.Recorder, logr.Discard(), b.CMClient, b.SharedInformerFactory.Certmanager().V1().Certificates().Lister(), controllerpkg.IngressShimOptions{
 				DefaultIssuerName:                 test.DefaultIssuerName,
 				DefaultIssuerKind:                 test.DefaultIssuerKind,
 				DefaultIssuerGroup:                test.DefaultIssuerGroup,
@@ -3163,17 +3260,6 @@ func TestSync(t *testing.T) {
 		}
 	})
 
-}
-
-type fakeHelper struct {
-	issuer cmapi.GenericIssuer
-}
-
-func (f *fakeHelper) GetGenericIssuer(ref cmmeta.ObjectReference, ns string) (cmapi.GenericIssuer, error) {
-	if f.issuer == nil {
-		return nil, fmt.Errorf("no issuer specified on fake helper")
-	}
-	return f.issuer, nil
 }
 
 func TestIssuerForIngress(t *testing.T) {
@@ -3294,20 +3380,21 @@ func buildGateway(name, namespace string, annotations map[string]string) *gwapi.
 			Name:        name,
 			Namespace:   namespace,
 			Annotations: annotations,
+			UID:         types.UID(name),
 		},
 	}
 }
 
-func buildIngressOwnerReferences(name, namespace string) []metav1.OwnerReference {
+func buildIngressOwnerReferences(name string) []metav1.OwnerReference {
 	return []metav1.OwnerReference{
-		*metav1.NewControllerRef(buildIngress(name, namespace, nil), ingressV1GVK),
+		*metav1.NewControllerRef(buildIngress(name, gen.DefaultTestNamespace, nil), ingressV1GVK),
 	}
 }
 
 // The Gateway name and UID are set to the same.
-func buildGatewayOwnerReferences(name, namespace string) []metav1.OwnerReference {
+func buildGatewayOwnerReferences(name string) []metav1.OwnerReference {
 	return []metav1.OwnerReference{
-		*metav1.NewControllerRef(buildIngress(name, namespace, nil), gatewayGVK),
+		*metav1.NewControllerRef(buildGateway(name, gen.DefaultTestNamespace, nil), gatewayGVK),
 	}
 }
 
@@ -3332,7 +3419,7 @@ func Test_validateGatewayListenerBlock(t *testing.T) {
 			ingLike: &gwapi.Gateway{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "gateway",
-					Namespace: "default",
+					Namespace: gen.DefaultTestNamespace,
 				},
 			},
 			listener: gwapi.Listener{
@@ -3347,7 +3434,7 @@ func Test_validateGatewayListenerBlock(t *testing.T) {
 			ingLike: &gwapi.Gateway{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "gateway",
-					Namespace: "default",
+					Namespace: gen.DefaultTestNamespace,
 				},
 			},
 			listener: gwapi.Listener{
@@ -3372,7 +3459,7 @@ func Test_validateGatewayListenerBlock(t *testing.T) {
 			ingLike: &gwapi.Gateway{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "example",
-					Namespace: "default",
+					Namespace: gen.DefaultTestNamespace,
 				},
 			},
 			listener: gwapi.Listener{
@@ -3436,7 +3523,7 @@ func Test_validateGatewayListenerBlock(t *testing.T) {
 			ingLike: &gwapi.Gateway{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "example",
-					Namespace: "default",
+					Namespace: gen.DefaultTestNamespace,
 				},
 			},
 			listener: gwapi.Listener{
@@ -3508,14 +3595,14 @@ func Test_findCertificatesToBeRemoved(t *testing.T) {
 			givenCerts: []*cmapi.Certificate{{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:            "cert-1",
-					Namespace:       "default",
-					OwnerReferences: buildGatewayOwnerReferences("ingress-1", "default"),
+					Namespace:       gen.DefaultTestNamespace,
+					OwnerReferences: buildGatewayOwnerReferences("ingress-1"),
 				}, Spec: cmapi.CertificateSpec{
 					SecretName: "secret-name",
 				}},
 			},
 			ingLike: &networkingv1.Ingress{
-				ObjectMeta: metav1.ObjectMeta{Name: "ingress-2", Namespace: "default", UID: "ingress-2"},
+				ObjectMeta: metav1.ObjectMeta{Name: "ingress-2", Namespace: gen.DefaultTestNamespace, UID: "ingress-2"},
 				Spec:       networkingv1.IngressSpec{TLS: []networkingv1.IngressTLS{{SecretName: "secret-name"}}},
 			},
 			wantToBeRemoved: nil,
@@ -3525,14 +3612,14 @@ func Test_findCertificatesToBeRemoved(t *testing.T) {
 			givenCerts: []*cmapi.Certificate{{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:            "cert-1",
-					Namespace:       "default",
-					OwnerReferences: buildGatewayOwnerReferences("ingress-1", "default"),
+					Namespace:       gen.DefaultTestNamespace,
+					OwnerReferences: buildGatewayOwnerReferences("ingress-1"),
 				}, Spec: cmapi.CertificateSpec{
 					SecretName: "secret-name",
 				}},
 			},
 			ingLike: &networkingv1.Ingress{
-				ObjectMeta: metav1.ObjectMeta{Name: "ingress-1", Namespace: "default", UID: "ingress-1"},
+				ObjectMeta: metav1.ObjectMeta{Name: "ingress-1", Namespace: gen.DefaultTestNamespace, UID: "ingress-1"},
 				Spec:       networkingv1.IngressSpec{TLS: []networkingv1.IngressTLS{{SecretName: "secret-name"}}},
 			},
 			wantToBeRemoved: nil,
@@ -3542,14 +3629,14 @@ func Test_findCertificatesToBeRemoved(t *testing.T) {
 			givenCerts: []*cmapi.Certificate{{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:            "cert-1",
-					Namespace:       "default",
-					OwnerReferences: buildGatewayOwnerReferences("ingress-1", "default"),
+					Namespace:       gen.DefaultTestNamespace,
+					OwnerReferences: buildGatewayOwnerReferences("ingress-1"),
 				}, Spec: cmapi.CertificateSpec{
 					SecretName: "secret-name",
 				}},
 			},
 			ingLike: &networkingv1.Ingress{
-				ObjectMeta: metav1.ObjectMeta{Name: "ingress-1", Namespace: "default", UID: "ingress-1"},
+				ObjectMeta: metav1.ObjectMeta{Name: "ingress-1", Namespace: gen.DefaultTestNamespace, UID: "ingress-1"},
 			},
 			wantToBeRemoved: []string{"cert-1"},
 		},
@@ -3558,14 +3645,14 @@ func Test_findCertificatesToBeRemoved(t *testing.T) {
 			givenCerts: []*cmapi.Certificate{{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:            "cert-1",
-					Namespace:       "default",
-					OwnerReferences: buildGatewayOwnerReferences("gw-1", "default"),
+					Namespace:       gen.DefaultTestNamespace,
+					OwnerReferences: buildGatewayOwnerReferences("gw-1"),
 				}, Spec: cmapi.CertificateSpec{
 					SecretName: "secret-name",
 				}},
 			},
 			ingLike: &gwapi.Gateway{
-				ObjectMeta: metav1.ObjectMeta{Name: "gw-2", Namespace: "default", UID: "gw-2"},
+				ObjectMeta: metav1.ObjectMeta{Name: "gw-2", Namespace: gen.DefaultTestNamespace, UID: "gw-2"},
 				Spec: gwapi.GatewaySpec{Listeners: []gwapi.Listener{{
 					TLS: &gwapi.GatewayTLSConfig{CertificateRefs: []gwapi.SecretObjectReference{
 						{
@@ -3581,14 +3668,14 @@ func Test_findCertificatesToBeRemoved(t *testing.T) {
 			givenCerts: []*cmapi.Certificate{{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:            "cert-1",
-					Namespace:       "default",
-					OwnerReferences: buildGatewayOwnerReferences("gw-1", "default"),
+					Namespace:       gen.DefaultTestNamespace,
+					OwnerReferences: buildGatewayOwnerReferences("gw-1"),
 				}, Spec: cmapi.CertificateSpec{
 					SecretName: "secret-name",
 				}},
 			},
 			ingLike: &gwapi.Gateway{
-				ObjectMeta: metav1.ObjectMeta{Name: "gw-1", Namespace: "default", UID: "gw-1"},
+				ObjectMeta: metav1.ObjectMeta{Name: "gw-1", Namespace: gen.DefaultTestNamespace, UID: "gw-1"},
 				Spec: gwapi.GatewaySpec{Listeners: []gwapi.Listener{
 					{TLS: &gwapi.GatewayTLSConfig{CertificateRefs: []gwapi.SecretObjectReference{{Name: "not-secret-name"}}}},
 				}},
@@ -3600,14 +3687,14 @@ func Test_findCertificatesToBeRemoved(t *testing.T) {
 			givenCerts: []*cmapi.Certificate{{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:            "cert-1",
-					Namespace:       "default",
-					OwnerReferences: buildGatewayOwnerReferences("gw-1", "default"),
+					Namespace:       gen.DefaultTestNamespace,
+					OwnerReferences: buildGatewayOwnerReferences("gw-1"),
 				}, Spec: cmapi.CertificateSpec{
 					SecretName: "secret-name",
 				}},
 			},
 			ingLike: &gwapi.Gateway{
-				ObjectMeta: metav1.ObjectMeta{Name: "gw-1", Namespace: "default", UID: "gw-1"},
+				ObjectMeta: metav1.ObjectMeta{Name: "gw-1", Namespace: gen.DefaultTestNamespace, UID: "gw-1"},
 				Spec: gwapi.GatewaySpec{Listeners: []gwapi.Listener{
 					{TLS: &gwapi.GatewayTLSConfig{CertificateRefs: []gwapi.SecretObjectReference{{Name: "secret-name"}}}},
 				}},
@@ -3625,7 +3712,7 @@ func Test_findCertificatesToBeRemoved(t *testing.T) {
 
 func Test_secretNameUsedIn_nilPointerGateway(t *testing.T) {
 	got := secretNameUsedIn("secret-name", &gwapi.Gateway{
-		ObjectMeta: metav1.ObjectMeta{Name: "gw-1", Namespace: "default", UID: "gw-1"},
+		ObjectMeta: metav1.ObjectMeta{Name: "gw-1", Namespace: gen.DefaultTestNamespace, UID: "gw-1"},
 		Spec: gwapi.GatewaySpec{Listeners: []gwapi.Listener{
 			{TLS: nil},
 			{TLS: &gwapi.GatewayTLSConfig{CertificateRefs: nil}},
@@ -3635,7 +3722,7 @@ func Test_secretNameUsedIn_nilPointerGateway(t *testing.T) {
 	assert.Equal(t, true, got)
 
 	got = secretNameUsedIn("secret-name", &gwapi.Gateway{
-		ObjectMeta: metav1.ObjectMeta{Name: "gw-1", Namespace: "default", UID: "gw-1"},
+		ObjectMeta: metav1.ObjectMeta{Name: "gw-1", Namespace: gen.DefaultTestNamespace, UID: "gw-1"},
 		Spec: gwapi.GatewaySpec{Listeners: []gwapi.Listener{
 			{TLS: nil},
 			{TLS: &gwapi.GatewayTLSConfig{CertificateRefs: nil}},

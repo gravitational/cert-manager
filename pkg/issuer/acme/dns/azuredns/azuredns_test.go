@@ -26,11 +26,12 @@ import (
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore/policy"
 	"github.com/Azure/azure-sdk-for-go/sdk/azidentity"
 	dns "github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/dns/armdns"
-	v1 "github.com/cert-manager/cert-manager/pkg/apis/acme/v1"
-	"github.com/cert-manager/cert-manager/pkg/issuer/acme/dns/util"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"k8s.io/apimachinery/pkg/util/rand"
+
+	v1 "github.com/cert-manager/cert-manager/pkg/apis/acme/v1"
+	"github.com/cert-manager/cert-manager/pkg/issuer/acme/dns/util"
 )
 
 var (
@@ -64,7 +65,20 @@ func TestLiveAzureDnsPresent(t *testing.T) {
 	provider, err := NewDNSProviderCredentials("", azureClientID, azureClientSecret, azuresubscriptionID, azureTenantID, azureResourceGroupName, azureHostedZoneName, util.RecursiveNameservers, false, &v1.AzureManagedIdentity{})
 	assert.NoError(t, err)
 
-	err = provider.Present(azureDomain, "_acme-challenge."+azureDomain+".", "123d==")
+	err = provider.Present(context.TODO(), azureDomain, "_acme-challenge."+azureDomain+".", "123d==")
+	assert.NoError(t, err)
+}
+
+func TestLiveAzureDnsPresentMultiple(t *testing.T) {
+	if !azureLiveTest {
+		t.Skip("skipping live test")
+	}
+	provider, err := NewDNSProviderCredentials("", azureClientID, azureClientSecret, azuresubscriptionID, azureTenantID, azureResourceGroupName, azureHostedZoneName, util.RecursiveNameservers, false, &v1.AzureManagedIdentity{})
+	assert.NoError(t, err)
+
+	err = provider.Present(context.TODO(), azureDomain, "_acme-challenge."+azureDomain+".", "123d==")
+	assert.NoError(t, err)
+	err = provider.Present(context.TODO(), azureDomain, "_acme-challenge."+azureDomain+".", "1123d==")
 	assert.NoError(t, err)
 }
 
@@ -78,7 +92,23 @@ func TestLiveAzureDnsCleanUp(t *testing.T) {
 	provider, err := NewDNSProviderCredentials("", azureClientID, azureClientSecret, azuresubscriptionID, azureTenantID, azureResourceGroupName, azureHostedZoneName, util.RecursiveNameservers, false, &v1.AzureManagedIdentity{})
 	assert.NoError(t, err)
 
-	err = provider.CleanUp(azureDomain, "_acme-challenge."+azureDomain+".", "123d==")
+	err = provider.CleanUp(context.TODO(), azureDomain, "_acme-challenge."+azureDomain+".", "123d==")
+	assert.NoError(t, err)
+}
+
+func TestLiveAzureDnsCleanUpMultiple(t *testing.T) {
+	if !azureLiveTest {
+		t.Skip("skipping live test")
+	}
+
+	time.Sleep(time.Second * 10)
+
+	provider, err := NewDNSProviderCredentials("", azureClientID, azureClientSecret, azuresubscriptionID, azureTenantID, azureResourceGroupName, azureHostedZoneName, util.RecursiveNameservers, false, &v1.AzureManagedIdentity{})
+	assert.NoError(t, err)
+
+	err = provider.CleanUp(context.TODO(), azureDomain, "_acme-challenge."+azureDomain+".", "123d==")
+	assert.NoError(t, err)
+	err = provider.CleanUp(context.TODO(), azureDomain, "_acme-challenge."+azureDomain+".", "1123d==")
 	assert.NoError(t, err)
 }
 
@@ -95,6 +125,17 @@ func TestInvalidAzureDns(t *testing.T) {
 
 	// Invalid tenantID
 	_, err = NewDNSProviderCredentials("", "cid", "secret", "", "invalid env value", "", "", util.RecursiveNameservers, false, &v1.AzureManagedIdentity{})
+	assert.Error(t, err)
+}
+
+func TestAuthenticationError(t *testing.T) {
+	provider, err := NewDNSProviderCredentials("", "invalid-client-id", "invalid-client-secret", "subid", "tenid", "rg", "example.com", util.RecursiveNameservers, false, &v1.AzureManagedIdentity{})
+	assert.NoError(t, err)
+
+	err = provider.Present(context.TODO(), "example.com", "_acme-challenge.example.com.", "123d==")
+	assert.Error(t, err)
+
+	err = provider.CleanUp(context.TODO(), "example.com", "_acme-challenge.example.com.", "123d==")
 	assert.Error(t, err)
 }
 
@@ -326,14 +367,12 @@ func TestGetAuthorizationFederatedSPT(t *testing.T) {
 		_, err = spt.GetToken(context.TODO(), policy.TokenRequestOptions{Scopes: []string{"test"}})
 		err = stabilizeError(err)
 		assert.Error(t, err)
-		assert.ErrorContains(t, err, fmt.Sprintf(`WorkloadIdentityCredential authentication failed
+		assert.ErrorContains(t, err, fmt.Sprintf(`authentication failed:
 POST %s/adfs/oauth2/token
 --------------------------------------------------------------------------------
 RESPONSE 502 Bad Gateway
 --------------------------------------------------------------------------------
-<REDACTED>
---------------------------------------------------------------------------------
-To troubleshoot, visit https://aka.ms/azsdk/go/identity/troubleshoot#workload`, ts.URL))
+see logs for more information`, ts.URL))
 	})
 }
 
@@ -374,14 +413,13 @@ func TestStabilizeResponseError(t *testing.T) {
 		zoneClient:        zc,
 	}
 
-	err = dnsProvider.Present("test.com", "fqdn.test.com.", "test123")
+	err = dnsProvider.Present(context.TODO(), "test.com", "fqdn.test.com.", "test123")
 	require.Error(t, err)
-	require.ErrorContains(t, err, fmt.Sprintf(`Zone test.com. not found in AzureDNS for domain fqdn.test.com.. Err: GET %s/subscriptions/subscriptionID/resourceGroups/resourceGroupName/providers/Microsoft.Network/dnsZones/test.com
+	require.ErrorContains(t, err, fmt.Sprintf(`Zone test.com. not found in AzureDNS for domain fqdn.test.com.. Err: request error:
+GET %s/subscriptions/subscriptionID/resourceGroups/resourceGroupName/providers/Microsoft.Network/dnsZones/test.com
 --------------------------------------------------------------------------------
-RESPONSE 502: 502 Bad Gateway
+RESPONSE 502 Bad Gateway
 ERROR CODE: TEST_ERROR_CODE
 --------------------------------------------------------------------------------
-<REDACTED>
---------------------------------------------------------------------------------
-`, ts.URL))
+see logs for more information`, ts.URL))
 }

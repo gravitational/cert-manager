@@ -40,7 +40,6 @@ import (
 	venafiapi "github.com/cert-manager/cert-manager/pkg/issuer/venafi/client/api"
 	logf "github.com/cert-manager/cert-manager/pkg/logs"
 	"github.com/cert-manager/cert-manager/pkg/metrics"
-	"github.com/cert-manager/cert-manager/pkg/util/pki"
 	utilpki "github.com/cert-manager/cert-manager/pkg/util/pki"
 )
 
@@ -63,6 +62,9 @@ type Venafi struct {
 
 	// fieldManager is the manager name used for the Apply operations.
 	fieldManager string
+
+	// userAgent is the string used as the UserAgent when making HTTP calls.
+	userAgent string
 }
 
 func init() {
@@ -82,6 +84,7 @@ func NewVenafi(ctx *controllerpkg.Context) certificatesigningrequests.Signer {
 		clientBuilder: venaficlient.New,
 		fieldManager:  ctx.FieldManager,
 		metrics:       ctx.Metrics,
+		userAgent:     ctx.RESTConfig.UserAgent,
 	}
 }
 
@@ -99,7 +102,7 @@ func (v *Venafi) Sign(ctx context.Context, csr *certificatesv1.CertificateSignin
 
 	resourceNamespace := v.issuerOptions.ResourceNamespace(issuerObj)
 
-	client, err := v.clientBuilder(resourceNamespace, v.secretsLister, issuerObj, v.metrics, log)
+	client, err := v.clientBuilder(resourceNamespace, v.secretsLister, issuerObj, v.metrics, log, v.userAgent)
 	if apierrors.IsNotFound(err) {
 		message := "Required secret resource not found"
 		v.recorder.Event(csr, corev1.EventTypeWarning, "SecretNotFound", message)
@@ -126,16 +129,6 @@ func (v *Venafi) Sign(ctx context.Context, csr *certificatesv1.CertificateSignin
 		}
 	}
 
-	duration, err := pki.DurationFromCertificateSigningRequest(csr)
-	if err != nil {
-		message := fmt.Sprintf("Failed to parse requested duration: %s", err)
-		log.Error(err, message)
-		v.recorder.Event(csr, corev1.EventTypeWarning, "ErrorParseDuration", message)
-		util.CertificateSigningRequestSetFailed(csr, "ErrorParseDuration", message)
-		_, userr := util.UpdateOrApplyStatus(ctx, v.certClient, csr, certificatesv1.CertificateFailed, v.fieldManager)
-		return userr
-	}
-
 	// The signing process with Venafi is slow. The "pickupID" allows us to track
 	// the progress of the certificate signing. It is set as an annotation the
 	// first time the Certificate is reconciled.
@@ -143,7 +136,7 @@ func (v *Venafi) Sign(ctx context.Context, csr *certificatesv1.CertificateSignin
 
 	// check if the pickup ID annotation is there, if not set it up.
 	if len(pickupID) == 0 {
-		pickupID, err := client.RequestCertificate(csr.Spec.Request, duration, customFields)
+		pickupID, err := client.RequestCertificate(csr.Spec.Request, customFields)
 		// Check some known error types
 		if err != nil {
 			switch err.(type) {
@@ -173,7 +166,7 @@ func (v *Venafi) Sign(ctx context.Context, csr *certificatesv1.CertificateSignin
 		return uerr
 	}
 
-	certPem, err := client.RetrieveCertificate(pickupID, csr.Spec.Request, duration, customFields)
+	certPem, err := client.RetrieveCertificate(pickupID, csr.Spec.Request, customFields)
 	if err != nil {
 		switch err.(type) {
 		case endpoint.ErrCertificatePending:

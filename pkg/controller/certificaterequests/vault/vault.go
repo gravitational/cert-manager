@@ -30,6 +30,7 @@ import (
 	crutil "github.com/cert-manager/cert-manager/pkg/controller/certificaterequests/util"
 	"github.com/cert-manager/cert-manager/pkg/issuer"
 	logf "github.com/cert-manager/cert-manager/pkg/logs"
+	cmerrors "github.com/cert-manager/cert-manager/pkg/util/errors"
 )
 
 const (
@@ -78,7 +79,7 @@ func (v *Vault) Sign(ctx context.Context, cr *v1.CertificateRequest, issuerObj v
 
 	resourceNamespace := v.issuerOptions.ResourceNamespace(issuerObj)
 
-	client, err := v.vaultClientBuilder(resourceNamespace, v.createTokenFn, v.secretsLister, issuerObj)
+	client, err := v.vaultClientBuilder(ctx, resourceNamespace, v.createTokenFn, v.secretsLister, issuerObj)
 	if k8sErrors.IsNotFound(err) {
 		message := "Required secret resource not found"
 
@@ -87,12 +88,16 @@ func (v *Vault) Sign(ctx context.Context, cr *v1.CertificateRequest, issuerObj v
 		return nil, nil
 	}
 
-	// TODO: distinguish between network errors and other which might warrant a failure.
 	if err != nil {
 		message := "Failed to initialise vault client for signing"
 		v.reporter.Pending(cr, err, "VaultInitError", message)
 		log.Error(err, message)
-		return nil, nil
+
+		if cmerrors.IsInvalidData(err) {
+			return nil, nil // Don't retry, wait for the issuer to be updated
+		}
+
+		return nil, err // Return error to requeue and retry
 	}
 
 	certDuration := apiutil.DefaultCertDuration(cr.Spec.Duration)

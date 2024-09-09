@@ -64,8 +64,7 @@ func generateCSR(t *testing.T, secretKey crypto.Signer) []byte {
 	return csr
 }
 
-func generateSelfSignedCertFromCR(cr *cmapi.CertificateRequest, key crypto.Signer,
-	duration time.Duration) ([]byte, error) {
+func generateSelfSignedCertFromCR(cr *cmapi.CertificateRequest, key crypto.Signer) ([]byte, error) {
 	template, err := pki.CertificateTemplateFromCertificateRequest(cr)
 	if err != nil {
 		return nil, fmt.Errorf("error generating template: %v", err)
@@ -134,7 +133,7 @@ func TestSign(t *testing.T) {
 		}),
 	)
 
-	rsaPEMCert, err := generateSelfSignedCertFromCR(baseCR, rsaSK, time.Hour*24*60)
+	rsaPEMCert, err := generateSelfSignedCertFromCR(baseCR, rsaSK)
 	if err != nil {
 		t.Error(err)
 		t.FailNow()
@@ -330,6 +329,47 @@ func TestSign(t *testing.T) {
 				},
 			},
 		},
+		"a client with a token secret referenced with token but temporary failed to authenticate should report pending and return error": {
+			certificateRequest: baseCR.DeepCopy(),
+			builder: &testpkg.Builder{
+				KubeObjects: []runtime.Object{tokenSecret},
+				CertManagerObjects: []runtime.Object{baseCR.DeepCopy(), gen.IssuerFrom(baseIssuer,
+					gen.SetIssuerVault(cmapi.VaultIssuer{
+						Auth: cmapi.VaultAuth{
+							TokenSecretRef: &cmmeta.SecretKeySelector{
+								Key: "my-token-key",
+								LocalObjectReference: cmmeta.LocalObjectReference{
+									Name: "token-secret",
+								},
+							},
+						},
+					}),
+				)},
+				ExpectedEvents: []string{
+					"Normal VaultInitError Failed to initialise vault client for signing: failed to create vault client, temporary auth failure",
+				},
+				ExpectedActions: []testpkg.Action{
+					testpkg.NewAction(coretesting.NewUpdateSubresourceAction(
+						cmapi.SchemeGroupVersion.WithResource("certificaterequests"),
+						"status",
+						gen.DefaultTestNamespace,
+						gen.CertificateRequestFrom(baseCR,
+							gen.SetCertificateRequestStatusCondition(cmapi.CertificateRequestCondition{
+								Type:               cmapi.CertificateRequestConditionReady,
+								Status:             cmmeta.ConditionFalse,
+								Reason:             cmapi.CertificateRequestReasonPending,
+								Message:            "Failed to initialise vault client for signing: failed to create vault client, temporary auth failure",
+								LastTransitionTime: &metaFixedClockStart,
+							}),
+						),
+					)),
+				},
+			},
+			fakeVault: fakevault.New().WithNew(func(string, internalinformers.SecretLister, cmapi.GenericIssuer) (*fakevault.Vault, error) {
+				return nil, errors.New("failed to create vault client, temporary auth failure")
+			}),
+			expectedErr: true,
+		},
 		"a client with a token secret referenced with token but failed to sign should report fail": {
 			certificateRequest: baseCR.DeepCopy(),
 			builder: &testpkg.Builder{
@@ -522,7 +562,7 @@ func runTest(t *testing.T, test testT) {
 	vault := NewVault(test.builder.Context).(*Vault)
 
 	if test.fakeVault != nil {
-		vault.vaultClientBuilder = func(ns string, _ func(ns string) internalvault.CreateToken, sl internalinformers.SecretLister,
+		vault.vaultClientBuilder = func(_ context.Context, ns string, _ func(ns string) internalvault.CreateToken, sl internalinformers.SecretLister,
 			iss cmapi.GenericIssuer) (internalvault.Interface, error) {
 			return test.fakeVault.New(ns, sl, iss)
 		}

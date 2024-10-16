@@ -6,7 +6,9 @@
 #
 # Specify the Gateway API configuration.
 gateway:
-  controllerName: projectcontour.io/projectcontour/contour
+  gatewayRef:
+    name: acmesolver
+    namespace: projectcontour
 #
 # should contour expect to be running inside a k8s cluster
 # incluster: true
@@ -15,7 +17,7 @@ gateway:
 # kubeconfig: /path/to/.kube/config
 #
 # Disable RFC-compliant behavior to strip "Content-Length" header if
-# "Tranfer-Encoding: chunked" is also set.
+# "Transfer-Encoding: chunked" is also set.
 # disableAllowChunkedLength: false
 #
 # Disable Envoy's non-standard merge_slashes path transformation option

@@ -105,7 +105,7 @@ func TestValidateVaultIssuerConfig(t *testing.T) {
 			errs: []*field.Error{
 				field.Required(fldPath.Child("server"), ""),
 				field.Required(fldPath.Child("path"), ""),
-				field.Required(fldPath.Child("auth"), "please supply one of: appRole, kubernetes, tokenSecretRef"),
+				field.Required(fldPath.Child("auth"), "please supply one of: appRole, kubernetes, tokenSecretRef, clientCertificate"),
 			},
 		},
 		"vault issuer with a CA bundle containing no valid certificates": {
@@ -276,6 +276,11 @@ func TestValidateVaultIssuerAuth(t *testing.T) {
 			},
 			errs: []*field.Error{
 				field.Required(fldPath.Child("appRole").Child("roleId"), ""),
+			},
+		},
+		"valid auth.clientCertificate: all fields can be empty": {
+			auth: &cmapi.VaultAuth{
+				ClientCertificate: &cmapi.VaultClientCertificateAuth{},
 			},
 		},
 		// The field auth.kubernetes.secretRef.key defaults to 'token' if
@@ -1034,19 +1039,9 @@ func TestValidateACMEIssuerDNS01Config(t *testing.T) {
 				field.Required(fldPath.Child("cloudflare", "email"), ""),
 			},
 		},
-		"missing route53 region": {
+		"empty route53 field should be valid because ambient credentials and region may be used instead": {
 			cfg: &cmacme.ACMEChallengeSolverDNS01{
 				Route53: &cmacme.ACMEIssuerDNS01ProviderRoute53{},
-			},
-			errs: []*field.Error{
-				field.Required(fldPath.Child("route53", "region"), ""),
-			},
-		},
-		"missing route53 accessKeyID and accessKeyIDSecretRef should be valid because ambient credentials may be used instead": {
-			cfg: &cmacme.ACMEChallengeSolverDNS01{
-				Route53: &cmacme.ACMEIssuerDNS01ProviderRoute53{
-					Region: "valid",
-				},
 			},
 			errs: []*field.Error{},
 		},
@@ -1646,6 +1641,10 @@ func TestValidateVenafiIssuerConfig(t *testing.T) {
 }
 
 func TestValidateVenafiTPP(t *testing.T) {
+	caBundle := unitcrypto.MustCreateCryptoBundle(t,
+		&pubcmapi.Certificate{Spec: pubcmapi.CertificateSpec{CommonName: "test"}},
+		clock.RealClock{},
+	).CertBytes
 	fldPath := field.NewPath("test")
 	scenarios := map[string]struct {
 		cfg  *cmapi.VenafiTPP
@@ -1660,6 +1659,21 @@ func TestValidateVenafiTPP(t *testing.T) {
 			cfg: &cmapi.VenafiTPP{},
 			errs: []*field.Error{
 				field.Required(fldPath.Child("url"), ""),
+			},
+		},
+		"venafi TPP issuer defines both caBundle and caBundleSecretRef": {
+			cfg: &cmapi.VenafiTPP{
+				URL:      "https://tpp.example.com/vedsdk",
+				CABundle: caBundle,
+				CABundleSecretRef: &cmmeta.SecretKeySelector{
+					Key: "ca.crt",
+					LocalObjectReference: cmmeta.LocalObjectReference{
+						Name: "test-secret",
+					},
+				},
+			},
+			errs: []*field.Error{
+				field.Forbidden(fldPath, "may not specify more than one of caBundle/caBundleSecretRef as TPP CA Bundle"),
 			},
 		},
 	}

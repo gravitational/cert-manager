@@ -16,11 +16,12 @@ limitations under the License.
 
 // feature contains cainjector feature gate setup code. Do not import this
 // package into any code that's shared with other components to prevent
-// overwriting other component's featue gates, see i.e
+// overwriting other component's feature gates, see i.e
 // https://github.com/cert-manager/cert-manager/issues/6011
 package feature
 
 import (
+	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/component-base/featuregate"
 
 	utilfeature "github.com/cert-manager/cert-manager/pkg/util/feature"
@@ -48,7 +49,7 @@ const (
 )
 
 func init() {
-	utilfeature.DefaultMutableFeatureGate.Add(cainjectorFeatureGates)
+	utilruntime.Must(utilfeature.DefaultMutableFeatureGate.Add(cainjectorFeatureGates))
 }
 
 // cainjectorFeatureGates defines all feature gates for the cainjector component.

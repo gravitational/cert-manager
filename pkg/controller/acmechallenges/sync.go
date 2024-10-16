@@ -20,9 +20,12 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"slices"
+	"time"
 
 	acmeapi "golang.org/x/crypto/acme"
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/types"
 	utilerrors "k8s.io/apimachinery/pkg/util/errors"
 
 	"github.com/cert-manager/cert-manager/internal/controller/feature"
@@ -30,7 +33,6 @@ import (
 	acmecl "github.com/cert-manager/cert-manager/pkg/acme/client"
 	cmacme "github.com/cert-manager/cert-manager/pkg/apis/acme/v1"
 	cmapi "github.com/cert-manager/cert-manager/pkg/apis/certmanager/v1"
-	controllerpkg "github.com/cert-manager/cert-manager/pkg/controller"
 	dnsutil "github.com/cert-manager/cert-manager/pkg/issuer/acme/dns/util"
 	logf "github.com/cert-manager/cert-manager/pkg/logs"
 	utilfeature "github.com/cert-manager/cert-manager/pkg/util/feature"
@@ -42,6 +44,10 @@ const (
 	reasonPresentError   = "PresentError"
 	reasonPresented      = "Presented"
 	reasonFailed         = "Failed"
+
+	// How long to wait for an authorization response from the ACME server in acceptChallenge()
+	// before giving up
+	authorizationTimeout = 20 * time.Second
 )
 
 // solver solves ACME challenges by presenting the given token and key in an
@@ -54,7 +60,7 @@ type solver interface {
 	// CleanUp will remove challenge records for a given solver.
 	// This may involve deleting resources in the Kubernetes API Server, or
 	// communicating with other external components (e.g. DNS providers).
-	CleanUp(ctx context.Context, issuer cmapi.GenericIssuer, ch *cmacme.Challenge) error
+	CleanUp(ctx context.Context, ch *cmacme.Challenge) error
 }
 
 // Sync will process this ACME Challenge.
@@ -87,8 +93,20 @@ func (c *controller) Sync(ctx context.Context, chOriginal *cmacme.Challenge) (er
 	// This finalizer ensures that the challenge is not garbage collected before
 	// cert-manager has a chance to clean up resources created for the
 	// challenge.
+	//
+	// API Transition
+	// -- Until UseDomainQualifiedFinalizer is active, we add cmacme.ACMELegacyFinalizer.
+	// -- When it is active we add cmacme.ACMEDomainQualifiedFinalizer instead.
+	//
+	// -- Both finalizers are supported, the flag just controls the one we add.
+	//
+	// -- We only need to add a finalizer label if no supported finalizer label is present.
 	if finalizerRequired(ch) {
-		ch.Finalizers = append(ch.Finalizers, cmacme.ACMEFinalizer)
+		finalizer := cmacme.ACMELegacyFinalizer
+		if utilfeature.DefaultFeatureGate.Enabled(feature.UseDomainQualifiedFinalizer) {
+			finalizer = cmacme.ACMEDomainQualifiedFinalizer
+		}
+		ch.Finalizers = append(ch.Finalizers, finalizer)
 		return nil
 	}
 
@@ -107,7 +125,7 @@ func (c *controller) Sync(ctx context.Context, chOriginal *cmacme.Challenge) (er
 				return err
 			}
 
-			err = solver.CleanUp(ctx, genericIssuer, ch)
+			err = solver.CleanUp(ctx, ch)
 			if err != nil {
 				c.recorder.Eventf(ch, corev1.EventTypeWarning, reasonCleanUpError, "Error cleaning up challenge: %v", err)
 				ch.Status.Reason = err.Error()
@@ -190,13 +208,10 @@ func (c *controller) Sync(ctx context.Context, chOriginal *cmacme.Challenge) (er
 		log.Error(err, "propagation check failed")
 		ch.Status.Reason = fmt.Sprintf("Waiting for %s challenge propagation: %s", ch.Spec.Type, err)
 
-		key, err := controllerpkg.KeyFunc(ch)
-		// This is an unexpected edge case and should never occur
-		if err != nil {
-			return err
-		}
-
-		c.queue.AddAfter(key, c.DNS01CheckRetryPeriod)
+		c.queue.AddAfter(types.NamespacedName{
+			Namespace: ch.Namespace,
+			Name:      ch.Name,
+		}, c.DNS01CheckRetryPeriod)
 
 		return nil
 	}
@@ -220,6 +235,9 @@ func handleError(ch *cmacme.Challenge, err error) error {
 	var acmeErr *acmeapi.Error
 	var ok bool
 	if acmeErr, ok = err.(*acmeapi.Error); !ok {
+		ch.Status.State = cmacme.Errored
+		ch.Status.Reason = fmt.Sprintf("unexpected non-ACME API error: %v", err)
+		logf.V(logf.ErrorLevel).ErrorS(err, "unexpected non-ACME API error")
 		return err
 	}
 
@@ -251,23 +269,20 @@ func (c *controller) handleFinalizer(ctx context.Context, ch *cmacme.Challenge) 
 	if len(ch.Finalizers) == 0 {
 		return nil
 	}
-	if ch.Finalizers[0] != cmacme.ACMEFinalizer {
+	if otherFinalizerPresent(ch) {
 		log.V(logf.DebugLevel).Info("waiting to run challenge finalization...")
 		return nil
 	}
 
 	defer func() {
 		// call Update to remove the metadata.finalizers entry
-		ch.Finalizers = ch.Finalizers[1:]
+		ch.Finalizers = slices.DeleteFunc(ch.Finalizers, func(finalizer string) bool {
+			return finalizer == cmacme.ACMELegacyFinalizer || finalizer == cmacme.ACMEDomainQualifiedFinalizer
+		})
 	}()
 
 	if !ch.Status.Processing {
 		return nil
-	}
-
-	genericIssuer, err := c.helper.GetGenericIssuer(ch.Spec.IssuerRef, ch.Namespace)
-	if err != nil {
-		return fmt.Errorf("error reading (cluster)issuer %q: %v", ch.Spec.IssuerRef.Name, err)
 	}
 
 	solver, err := c.solverFor(ch.Spec.Type)
@@ -276,7 +291,7 @@ func (c *controller) handleFinalizer(ctx context.Context, ch *cmacme.Challenge) 
 		return nil
 	}
 
-	err = solver.CleanUp(ctx, genericIssuer, ch)
+	err = solver.CleanUp(ctx, ch)
 	if err != nil {
 		c.recorder.Eventf(ch, corev1.EventTypeWarning, reasonCleanUpError, "Error cleaning up challenge: %v", err)
 		ch.Status.Reason = err.Error()
@@ -375,7 +390,15 @@ func (c *controller) acceptChallenge(ctx context.Context, cl acmecl.Interface, c
 	}
 
 	log.V(logf.DebugLevel).Info("waiting for authorization for domain")
-	authorization, err := cl.WaitAuthorization(ctx, ch.Spec.AuthorizationURL)
+	// The underlying ACME implementation from golang.org/x/crypto of WaitAuthorization retries on
+	// response parsing errors.  In the event that an ACME server is not returning expected JSON
+	// responses, the call to WaitAuthorization can and has been seen to not return and loop forever,
+	// blocking the challenge's processing. Here, we defensively add a timeout for this exchange
+	// with the ACME server and a "context deadline reached" error will be returned by WaitAuthorization
+	// in the err variable.
+	ctxTimeout, cancelAuthorization := context.WithTimeout(ctx, authorizationTimeout)
+	defer cancelAuthorization()
+	authorization, err := cl.WaitAuthorization(ctxTimeout, ch.Spec.AuthorizationURL)
 	if err != nil {
 		log.Error(err, "error waiting for authorization")
 		return c.handleAuthorizationError(ch, err)

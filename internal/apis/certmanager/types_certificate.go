@@ -150,7 +150,26 @@ type CertificateSpec struct {
 	// If unset, this defaults to 1/3 of the issued certificate's lifetime.
 	// Minimum accepted value is 5 minutes.
 	// Value must be in units accepted by Go time.ParseDuration https://golang.org/pkg/time/#ParseDuration.
+	// Cannot be set if the `renewBeforePercentage` field is set.
+	// +optional
 	RenewBefore *metav1.Duration
+
+	// `renewBeforePercentage` is like `renewBefore`, except it is a relative percentage
+	// rather than an absolute duration. For example, if a certificate is valid for 60
+	// minutes, and  `renewBeforePercentage=25`, cert-manager will begin to attempt to
+	// renew the certificate 45 minutes after it was issued (i.e. when there are 15
+	// minutes (25%) remaining until the certificate is no longer valid).
+	//
+	// NOTE: The actual lifetime of the issued certificate is used to determine the
+	// renewal time. If an issuer returns a certificate with a different lifetime than
+	// the one requested, cert-manager will use the lifetime of the issued certificate.
+	//
+	// Value must be an integer in the range (0,100). The minimum effective
+	// `renewBefore` derived from the `renewBeforePercentage` and `duration` fields is 5
+	// minutes.
+	// Cannot be set if the `renewBefore` field is set.
+	// +optional
+	RenewBeforePercentage *int32
 
 	// Requested DNS subject alternative names.
 	DNSNames []string
@@ -272,7 +291,7 @@ type CertificatePrivateKey struct {
 	// re-issuance is being processed.
 	//
 	// If set to `Never`, a private key will only be generated if one does not
-	// already exist in the target `spec.secretName`. If one does exists but it
+	// already exist in the target `spec.secretName`. If one does exist but it
 	// does not have the correct algorithm or size, a warning will be raised
 	// to await user intervention.
 	// If set to `Always`, a private key matching the specified requirements
@@ -316,7 +335,7 @@ type PrivateKeyRotationPolicy string
 var (
 	// RotationPolicyNever means a private key will only be generated if one
 	// does not already exist in the target `spec.secretName`.
-	// If one does exists but it does not have the correct algorithm or size,
+	// If one does exist but it does not have the correct algorithm or size,
 	// a warning will be raised to await user intervention.
 	RotationPolicyNever PrivateKeyRotationPolicy = "Never"
 
@@ -463,7 +482,7 @@ type CertificateStatus struct {
 	// Known condition types are `Ready` and `Issuing`.
 	Conditions []CertificateCondition
 
-	// LastFailureTime is set only if the lastest issuance for this
+	// LastFailureTime is set only if the latest issuance for this
 	// Certificate failed and contains the time of the failure. If an
 	// issuance has failed, the delay till the next issuance will be
 	// calculated using formula time.Hour * 2 ^ (failedIssuanceAttempts -
@@ -515,7 +534,7 @@ type CertificateStatus struct {
 	FailedIssuanceAttempts *int
 }
 
-// CertificateCondition contains condition information for an Certificate.
+// CertificateCondition contains condition information for a Certificate.
 type CertificateCondition struct {
 	// Type of the condition, known values are (`Ready`, `Issuing`).
 	Type CertificateConditionType
@@ -543,7 +562,7 @@ type CertificateCondition struct {
 	ObservedGeneration int64
 }
 
-// CertificateConditionType represents an Certificate condition value.
+// CertificateConditionType represents a Certificate condition value.
 type CertificateConditionType string
 
 const (

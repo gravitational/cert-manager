@@ -30,6 +30,7 @@ import (
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/selection"
+	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/client-go/discovery"
 	"k8s.io/client-go/kubernetes"
 	kscheme "k8s.io/client-go/kubernetes/scheme"
@@ -240,7 +241,7 @@ type SchedulerOptions struct {
 	MaxConcurrentChallenges int
 }
 
-// ContextFactory is used for constructing new Contexts who's clients have been
+// ContextFactory is used for constructing new Contexts whose clients have been
 // configured with a User Agent built from the component name.
 type ContextFactory struct {
 	// baseRestConfig is the base Kubernetes REST config that can authenticate to
@@ -325,15 +326,15 @@ func NewContextFactory(ctx context.Context, opts ContextOptions) (*ContextFactor
 	}, nil
 }
 
-// Build builds a new controller Context who's clients have a User Agent
+// Build builds a new controller Context whose clients have a User Agent
 // derived from the optional component name.
 func (c *ContextFactory) Build(component ...string) (*Context, error) {
 	restConfig := util.RestConfigWithUserAgent(c.baseRestConfig, component...)
 
 	scheme := runtime.NewScheme()
-	kscheme.AddToScheme(scheme)
-	cmscheme.AddToScheme(scheme)
-	gwscheme.AddToScheme(scheme)
+	utilruntime.Must(kscheme.AddToScheme(scheme))
+	utilruntime.Must(cmscheme.AddToScheme(scheme))
+	utilruntime.Must(gwscheme.AddToScheme(scheme))
 
 	clients, err := buildClients(restConfig, c.ctx.ContextOptions)
 	if err != nil {

@@ -136,11 +136,14 @@ func TestAcmeOrdersController(t *testing.T) {
 	}
 
 	// Create a new orders controller.
-	ctrl, queue, mustSync := acmeorders.NewController(
+	ctrl, queue, mustSync, err := acmeorders.NewController(
 		logf.Log,
 		&controllerContext,
 		false,
 	)
+	if err != nil {
+		t.Fatal(err)
+	}
 	c := controllerpkg.NewController(
 		"orders_test",
 		metrics.New(logf.Log, clock.RealClock{}),
@@ -161,8 +164,7 @@ func TestAcmeOrdersController(t *testing.T) {
 
 	// Create a Namespace.
 	ns := &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: testName}}
-	_, err := kubeClient.CoreV1().Namespaces().Create(ctx, ns, metav1.CreateOptions{})
-	if err != nil {
+	if _, err := kubeClient.CoreV1().Namespaces().Create(ctx, ns, metav1.CreateOptions{}); err != nil {
 		t.Fatal(err)
 	}
 
@@ -242,7 +244,7 @@ func TestAcmeOrdersController(t *testing.T) {
 	// valid.
 	// https://github.com/cert-manager/cert-manager/issues/2868
 
-	// Set the Challenge state to valid- the status of the ACME order remains 'pending'.
+	// Set the Challenge state to valid, the status of the ACME order remains 'pending'.
 	chal = chal.DeepCopy()
 	chal.Status.State = cmacme.Valid
 	_, err = cmCl.AcmeV1().Challenges(testName).UpdateStatus(ctx, chal, metav1.UpdateOptions{})

@@ -53,7 +53,7 @@ certmanager_clock_time_seconds %.9e`, float64(fixedClock.Now().Unix()))
 certmanager_clock_time_seconds_gauge %.9e`, float64(fixedClock.Now().Unix()))
 )
 
-// TestMetricscontoller performs a basic test to ensure that Certificates
+// TestMetricsController performs a basic test to ensure that Certificates
 // metrics are exposed when a Certificate is created, updated, and removed when
 // it is deleted.
 func TestMetricsController(t *testing.T) {
@@ -102,7 +102,10 @@ func TestMetricsController(t *testing.T) {
 			Metrics: metricsHandler,
 		},
 	}
-	ctrl, queue, mustSync := controllermetrics.NewController(&controllerContext)
+	ctrl, queue, mustSync, err := controllermetrics.NewController(&controllerContext)
+	if err != nil {
+		t.Fatal(err)
+	}
 	c := controllerpkg.NewController(
 		"metrics_test",
 		metricsHandler,
@@ -145,7 +148,8 @@ func TestMetricsController(t *testing.T) {
 			return err
 		}
 
-		if strings.TrimSpace(string(output)) != strings.TrimSpace(expectedOutput) {
+		trimmedOutput := strings.SplitN(string(output), "# HELP go_gc_duration_seconds", 2)[0]
+		if strings.TrimSpace(trimmedOutput) != strings.TrimSpace(expectedOutput) {
 			return fmt.Errorf("got unexpected metrics output\nexp:\n%s\ngot:\n%s\n",
 				expectedOutput, output)
 		}

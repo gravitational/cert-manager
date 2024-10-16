@@ -24,6 +24,7 @@ import (
 	logtesting "github.com/go-logr/logr/testing"
 	"github.com/prometheus/client_golang/prometheus/testutil"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/utils/clock"
 
 	cmapi "github.com/cert-manager/cert-manager/pkg/apis/certmanager/v1"
@@ -322,7 +323,10 @@ func TestCertificateCache(t *testing.T) {
 	}
 
 	// Remove second certificate and check not exists
-	m.RemoveCertificate("default-unit-test-ns/crt2")
+	m.RemoveCertificate(types.NamespacedName{
+		Namespace: "default-unit-test-ns",
+		Name:      "crt2",
+	})
 	if err := testutil.CollectAndCompare(m.certificateReadyStatus,
 		strings.NewReader(readyMetadata+`
         certmanager_certificate_ready_status{condition="False",issuer_group="test-issuer-group",issuer_kind="test-issuer-kind",issuer_name="test-issuer",name="crt1",namespace="default-unit-test-ns"} 0
@@ -347,19 +351,22 @@ func TestCertificateCache(t *testing.T) {
 	}
 
 	// Remove all Certificates (even is already removed) and observe no Certificates
-	m.RemoveCertificate("default-unit-test-ns/crt1")
-	m.RemoveCertificate("default-unit-test-ns/crt2")
-	m.RemoveCertificate("default-unit-test-ns/crt3")
-	if err := testutil.CollectAndCompare(m.certificateReadyStatus,
-		strings.NewReader(readyMetadata),
-		"certmanager_certificate_ready_status",
-	); err != nil {
-		t.Errorf("unexpected collecting result:\n%s", err)
+	m.RemoveCertificate(types.NamespacedName{
+		Namespace: "default-unit-test-ns",
+		Name:      "crt1",
+	})
+	m.RemoveCertificate(types.NamespacedName{
+		Namespace: "default-unit-test-ns",
+		Name:      "crt2",
+	})
+	m.RemoveCertificate(types.NamespacedName{
+		Namespace: "default-unit-test-ns",
+		Name:      "crt3",
+	})
+	if testutil.CollectAndCount(m.certificateReadyStatus, "certmanager_certificate_ready_status") != 0 {
+		t.Errorf("unexpected collecting result")
 	}
-	if err := testutil.CollectAndCompare(m.certificateExpiryTimeSeconds,
-		strings.NewReader(expiryMetadata),
-		"certmanager_certificate_expiration_timestamp_seconds",
-	); err != nil {
-		t.Errorf("unexpected collecting result:\n%s", err)
+	if testutil.CollectAndCount(m.certificateExpiryTimeSeconds, "certmanager_certificate_expiration_timestamp_seconds") != 0 {
+		t.Errorf("unexpected collecting result")
 	}
 }

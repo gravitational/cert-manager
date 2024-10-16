@@ -220,4 +220,8 @@ type ACMEDNS01Config struct {
 	// token is served at the challenge URL. This should be a valid duration
 	// string, for example 180s or 1h
 	CheckRetryPeriod *sharedv1alpha1.Duration `json:"checkRetryPeriod,omitempty"`
+
+	// The duration the controller should wait after determining that an ACME dns entry exists.
+	// This should be a valid duration string, for example 180s or 1h
+	PropagationTime *sharedv1alpha1.Duration `json:"propagationTime,omitempty"`
 }

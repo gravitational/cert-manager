@@ -44,6 +44,11 @@ func (in *ACMEDNS01Config) DeepCopyInto(out *ACMEDNS01Config) {
 		*out = new(sharedv1alpha1.Duration)
 		**out = **in
 	}
+	if in.PropagationTime != nil {
+		in, out := &in.PropagationTime, &out.PropagationTime
+		*out = new(sharedv1alpha1.Duration)
+		**out = **in
+	}
 	return
 }
 

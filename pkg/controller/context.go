@@ -211,6 +211,9 @@ type ACMEOptions struct {
 
 	// DNS01CheckRetryPeriod is the time the controller should wait between checking if a ACME dns entry exists.
 	DNS01CheckRetryPeriod time.Duration
+
+	// The duration the controller should wait after determining that an ACME dns entry exists.
+	DNS01PropagationTime time.Duration
 }
 
 // IngressShimOptions contain default Issuer GVK config for the certificate-shim controllers.

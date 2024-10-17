@@ -65,6 +65,7 @@
 	},
 	"acmeDNS01Config": {
 		"recursiveNameserversOnly": false,
-		"checkRetryPeriod": "10s"
+		"checkRetryPeriod": "10s",
+		"propagationTime": "1m0s"
 	}
 }

@@ -77,8 +77,10 @@ var _ = framework.CertManagerDescribe("CA CertificateRequest", func() {
 
 	AfterEach(func() {
 		By("Cleaning up")
-		f.KubeClientSet.CoreV1().Secrets(f.Namespace.Name).Delete(ctx, issuerSecretName, metav1.DeleteOptions{})
-		f.CertManagerClientSet.CertmanagerV1().Issuers(f.Namespace.Name).Delete(ctx, issuerName, metav1.DeleteOptions{})
+		err := f.KubeClientSet.CoreV1().Secrets(f.Namespace.Name).Delete(ctx, issuerSecretName, metav1.DeleteOptions{})
+		Expect(err).NotTo(HaveOccurred())
+		err = f.CertManagerClientSet.CertmanagerV1().Issuers(f.Namespace.Name).Delete(ctx, issuerName, metav1.DeleteOptions{})
+		Expect(err).NotTo(HaveOccurred())
 	})
 
 	Context("when the CA is the root", func() {
@@ -92,7 +94,7 @@ var _ = framework.CertManagerDescribe("CA CertificateRequest", func() {
 			certRequestClient := f.CertManagerClientSet.CertmanagerV1().CertificateRequests(f.Namespace.Name)
 
 			By("Creating a CertificateRequest")
-			cr, key, err := util.NewCertManagerBasicCertificateRequest(certificateRequestName, issuerName, v1.IssuerKind,
+			cr, key, err := util.NewCertManagerBasicCertificateRequest(certificateRequestName, f.Namespace.Name, issuerName, v1.IssuerKind,
 				&metav1.Duration{
 					Duration: time.Hour * 24 * 90,
 				},
@@ -109,7 +111,7 @@ var _ = framework.CertManagerDescribe("CA CertificateRequest", func() {
 			certRequestClient := f.CertManagerClientSet.CertmanagerV1().CertificateRequests(f.Namespace.Name)
 
 			By("Creating a CertificateRequest")
-			cr, key, err := util.NewCertManagerBasicCertificateRequest(certificateRequestName, issuerName, v1.IssuerKind,
+			cr, key, err := util.NewCertManagerBasicCertificateRequest(certificateRequestName, f.Namespace.Name, issuerName, v1.IssuerKind,
 				&metav1.Duration{
 					Duration: time.Hour * 24 * 90,
 				},
@@ -126,7 +128,7 @@ var _ = framework.CertManagerDescribe("CA CertificateRequest", func() {
 			certRequestClient := f.CertManagerClientSet.CertmanagerV1().CertificateRequests(f.Namespace.Name)
 
 			By("Creating a CertificateRequest")
-			cr, key, err := util.NewCertManagerBasicCertificateRequest(certificateRequestName, issuerName, v1.IssuerKind,
+			cr, key, err := util.NewCertManagerBasicCertificateRequest(certificateRequestName, f.Namespace.Name, issuerName, v1.IssuerKind,
 				&metav1.Duration{
 					Duration: time.Hour * 24 * 90,
 				},
@@ -156,7 +158,6 @@ var _ = framework.CertManagerDescribe("CA CertificateRequest", func() {
 			},
 		}
 		for _, v := range cases {
-			v := v
 			It("should generate a signed certificate valid for "+v.label, func() {
 				crClient := f.CertManagerClientSet.CertmanagerV1().CertificateRequests(f.Namespace.Name)
 

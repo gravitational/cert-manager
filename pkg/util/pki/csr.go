@@ -260,11 +260,13 @@ func GenerateCSR(crt *v1.Certificate, optFuncs ...GenerateCSROption) (*x509.Cert
 			return nil, fmt.Errorf("failed to build key usages: %w", err)
 		}
 
-		usage, err := MarshalKeyUsage(ku)
-		if err != nil {
-			return nil, fmt.Errorf("failed to asn1 encode usages: %w", err)
+		if ku != 0 {
+			usage, err := MarshalKeyUsage(ku)
+			if err != nil {
+				return nil, fmt.Errorf("failed to asn1 encode usages: %w", err)
+			}
+			extraExtensions = append(extraExtensions, usage)
 		}
-		extraExtensions = append(extraExtensions, usage)
 
 		// Only add extended usages if they are specified.
 		if len(ekus) > 0 {
@@ -361,7 +363,7 @@ func SignCertificate(template *x509.Certificate, issuerCert *x509.Certificate, p
 
 // SignCSRTemplate signs a certificate template usually based upon a CSR. This
 // function expects all fields to be present in the certificate template,
-// including it's public key.
+// including its public key.
 // It returns the PEM bundle containing certificate data and the CA data, encoded in PEM format.
 func SignCSRTemplate(caCerts []*x509.Certificate, caKey crypto.Signer, template *x509.Certificate) (PEMBundle, error) {
 	if len(caCerts) == 0 {

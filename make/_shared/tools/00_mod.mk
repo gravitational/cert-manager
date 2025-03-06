@@ -120,6 +120,7 @@ tools += goreleaser=v1.26.2
 tools += syft=v0.100.0
 # https://github.com/cert-manager/helm-tool
 tools += helm-tool=v0.5.3
+tools += helm-tool=v0.5.3
 # https://github.com/cert-manager/cmctl
 tools += cmctl=v2.1.1
 # https://pkg.go.dev/github.com/cert-manager/release/cmd/cmrel?tab=versions

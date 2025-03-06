@@ -104,6 +104,7 @@ func TestParseSingleCertificateChainPEM(t *testing.T) {
 	{
 		root := mustCreateBundle(t, nil, "root")
 		bigCertBundle.CAPEM = root.pem
+		bigCertBundle.CAPEM = root.pem
 
 		cert := root
 		var pems [][]byte

@@ -316,7 +316,13 @@ If not set and create is true, a name is generated using the fullname template.
 
 #### **serviceAccount.annotations** ~ `object`
 
-Optional additional annotations to add to the controller's Service Account.
+Optional additional annotations to add to the controller's Service Account. Templates are allowed for both keys and values.  
+Example using templating:
+
+```yaml
+annotations:
+  "{{ .Chart.Name }}-helm-chart/version": "{{ .Chart.Version }}"
+```
 
 #### **serviceAccount.labels** ~ `object`
 
@@ -364,17 +370,24 @@ config:
   kubernetesAPIQPS: 9000
   kubernetesAPIBurst: 9000
   numberOfConcurrentWorkers: 200
+  enableGatewayAPI: true
+  # Feature gates as of v1.17.0. Listed with their default values.
+  # See https://cert-manager.io/docs/cli/controller/
   featureGates:
-    AdditionalCertificateOutputFormats: true
-    DisallowInsecureCSRUsageDefinition: true
-    ExperimentalCertificateSigningRequestControllers: true
-    ExperimentalGatewayAPISupport: true
-    LiteralCertificateSubject: true
-    SecretsFilteredCaching: true
-    ServerSideApply: true
-    StableCertificateRequestName: true
-    UseCertificateRequestBasicConstraints: true
-    ValidateCAA: true
+    AdditionalCertificateOutputFormats: true # BETA - default=true
+    AllAlpha: false # ALPHA - default=false
+    AllBeta: false # BETA - default=false
+    ExperimentalCertificateSigningRequestControllers: false # ALPHA - default=false
+    ExperimentalGatewayAPISupport: true # BETA - default=true
+    LiteralCertificateSubject: true # BETA - default=true
+    NameConstraints: true # BETA - default=true
+    OtherNames: false # ALPHA - default=false
+    SecretsFilteredCaching: true # BETA - default=true
+    ServerSideApply: false # ALPHA - default=false
+    StableCertificateRequestName: true # BETA - default=true
+    UseCertificateRequestBasicConstraints: false # ALPHA - default=false
+    UseDomainQualifiedFinalizer: true # BETA - default=false
+    ValidateCAA: false # ALPHA - default=false
   # Configure the metrics server for TLS
   # See https://cert-manager.io/docs/devops-tips/prometheus-metrics/#tls
   metricsTLSConfig:

@@ -23,6 +23,7 @@ import (
 	"crypto/x509/pkix"
 	"fmt"
 	"reflect"
+	"slices"
 	"testing"
 	"time"
 )
@@ -103,6 +104,7 @@ func TestParseSingleCertificateChainPEM(t *testing.T) {
 	{
 		root := mustCreateBundle(t, nil, "root")
 		bigCertBundle.CAPEM = root.pem
+		bigCertBundle.CAPEM = root.pem
 
 		cert := root
 		var pems [][]byte
@@ -111,8 +113,8 @@ func TestParseSingleCertificateChainPEM(t *testing.T) {
 			pems = append(pems, cert.pem)
 		}
 
-		for i := len(pems) - 1; i >= 0; i-- {
-			bigCertBundle.ChainPEM = joinPEM(bigCertBundle.ChainPEM, pems[i])
+		for _, pem := range slices.Backward(pems) {
+			bigCertBundle.ChainPEM = joinPEM(bigCertBundle.ChainPEM, pem)
 		}
 	}
 

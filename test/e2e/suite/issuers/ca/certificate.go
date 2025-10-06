@@ -23,11 +23,10 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/cert-manager/cert-manager/e2e-tests/framework"
+	"github.com/cert-manager/cert-manager/e2e-tests/framework/helper/validation/certificates"
 	"github.com/cert-manager/cert-manager/e2e-tests/util"
-	"github.com/cert-manager/cert-manager/internal/controller/feature"
 	v1 "github.com/cert-manager/cert-manager/pkg/apis/certmanager/v1"
 	cmmeta "github.com/cert-manager/cert-manager/pkg/apis/meta/v1"
-	utilfeature "github.com/cert-manager/cert-manager/pkg/util/feature"
 	"github.com/cert-manager/cert-manager/test/unit/gen"
 
 	. "github.com/onsi/ginkgo/v2"
@@ -157,10 +156,6 @@ var _ = framework.CertManagerDescribe("CA Certificate", func() {
 		})
 
 		It("should be able to create a certificate with additional output formats", func() {
-			// Output formats is only enabled via this feature gate being enabled.
-			// Don't run test if the gate isn't enabled.
-			framework.RequireFeatureGate(utilfeature.DefaultFeatureGate, feature.AdditionalCertificateOutputFormats)
-
 			certClient := f.CertManagerClientSet.CertmanagerV1().Certificates(f.Namespace.Name)
 
 			By("Creating a Certificate")
@@ -236,7 +231,8 @@ var _ = framework.CertManagerDescribe("CA Certificate", func() {
 				err = f.Helper().ValidateCertificate(cert)
 				Expect(err).NotTo(HaveOccurred())
 
-				f.CertificateDurationValid(ctx, cert, v.expectedDuration, 0)
+				err = f.Helper().ValidateCertificate(cert, certificates.ExpectDuration(v.expectedDuration, 0))
+				Expect(err).NotTo(HaveOccurred())
 			})
 		}
 	})

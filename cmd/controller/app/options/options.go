@@ -143,6 +143,8 @@ func AddConfigFlags(fs *pflag.FlagSet, c *config.ControllerConfiguration) {
 
 	fs.StringSliceVar(&c.IngressShimConfig.DefaultAutoCertificateAnnotations, "auto-certificate-annotations", c.IngressShimConfig.DefaultAutoCertificateAnnotations, ""+
 		"The annotation consumed by the ingress-shim controller to indicate an ingress is requesting a certificate")
+	fs.StringSliceVar(&c.IngressShimConfig.ExtraCertificateAnnotations, "extra-certificate-annotations", []string{}, ""+
+		"Extra annotation to be added by the ingress-shim controller to certificate object")
 	fs.StringVar(&c.IngressShimConfig.DefaultIssuerName, "default-issuer-name", c.IngressShimConfig.DefaultIssuerName, ""+
 		"Name of the Issuer to use when the tls is requested but issuer name is not specified on the ingress resource.")
 	fs.StringVar(&c.IngressShimConfig.DefaultIssuerKind, "default-issuer-kind", c.IngressShimConfig.DefaultIssuerKind, ""+
@@ -153,7 +155,7 @@ func AddConfigFlags(fs *pflag.FlagSet, c *config.ControllerConfiguration) {
 	fs.StringSliceVar(&c.ACMEDNS01Config.RecursiveNameservers, "dns01-recursive-nameservers",
 		c.ACMEDNS01Config.RecursiveNameservers, "A list of comma separated dns server endpoints used for DNS01 and DNS-over-HTTPS (DoH) check requests. "+
 			"This should be a list containing entries of the following formats: `<ip address>:<port>` or `https://<DoH RFC 8484 server address>`. "+
-			"For example: `8.8.8.8:53,8.8.4.4:53` or `https://1.1.1.1/dns-query,https://8.8.8.8/dns-query`. "+
+			"For example: `8.8.8.8:53,8.8.4.4:53,[2001:4860:4860::8888]:53` or `https://1.1.1.1/dns-query,https://8.8.8.8/dns-query`. "+
 			"To make sure ALL DNS requests happen through DoH, `dns01-recursive-nameservers-only` should also be set to true.")
 	fs.BoolVar(&c.ACMEDNS01Config.RecursiveNameserversOnly, "dns01-recursive-nameservers-only",
 		c.ACMEDNS01Config.RecursiveNameserversOnly,
@@ -177,7 +179,7 @@ func AddConfigFlags(fs *pflag.FlagSet, c *config.ControllerConfiguration) {
 		"feature gate must also be enabled (default as of 1.15).")
 	fs.StringSliceVar(&c.CopiedAnnotationPrefixes, "copied-annotation-prefixes", c.CopiedAnnotationPrefixes, "Specify which annotations should/shouldn't be copied"+
 		"from Certificate to CertificateRequest and Order, as well as from CertificateSigningRequest to Order, by passing a list of annotation key prefixes."+
-		"A prefix starting with a dash(-) specifies an annotation that shouldn't be copied. Example: '*,-kubectl.kuberenetes.io/'- all annotations"+
+		"A prefix starting with a dash(-) specifies an annotation that shouldn't be copied. Example: '*,-kubectl.kubernetes.io/'- all annotations"+
 		"will be copied apart from the ones where the key is prefixed with 'kubectl.kubernetes.io/'.")
 	fs.Var(cliflag.NewMapStringBool(&c.FeatureGates), "feature-gates", "A set of key=value pairs that describe feature gates for alpha/experimental features. "+
 		"Options are:\n"+strings.Join(utilfeature.DefaultFeatureGate.KnownFeatures(), "\n"))
@@ -252,8 +254,6 @@ func EnabledControllers(o *config.ControllerConfiguration) sets.Set[string] {
 		enabled = enabled.Insert(defaults.DefaultEnabledControllers...)
 	}
 
-	enabled = enabled.Delete(disabled...)
-
 	if utilfeature.DefaultFeatureGate.Enabled(feature.ExperimentalCertificateSigningRequestControllers) {
 		logf.Log.Info("enabling all experimental certificatesigningrequest controllers")
 		enabled = enabled.Insert(defaults.ExperimentalCertificateSigningRequestControllers...)
@@ -263,6 +263,20 @@ func EnabledControllers(o *config.ControllerConfiguration) sets.Set[string] {
 		logf.Log.Info("enabling the sig-network Gateway API certificate-shim and HTTP-01 solver")
 		enabled = enabled.Insert(shimgatewaycontroller.ControllerName)
 	}
+
+	if utilfeature.DefaultFeatureGate.Enabled(feature.ValidateCAA) {
+		logf.Log.Info("the ValidateCAA feature flag has been removed and is now a no-op")
+	}
+
+	// If running namespaced, remove all cluster-scoped controllers.
+	if o.Namespace != "" {
+		logf.Log.Info("disabling all cluster-scoped controllers as cert-manager is scoped to a single namespace",
+			"controllers", strings.Join(defaults.ClusterScopedControllers, ", "))
+		enabled = enabled.Delete(defaults.ClusterScopedControllers...)
+	}
+
+	// Only after all controllers have been added, remove the disabled ones.
+	enabled = enabled.Delete(disabled...)
 
 	return enabled
 }

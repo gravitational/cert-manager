@@ -33,9 +33,10 @@ import (
 
 	"github.com/cert-manager/cert-manager/e2e-tests/framework"
 	"github.com/cert-manager/cert-manager/e2e-tests/util"
-	certmanager "github.com/cert-manager/cert-manager/pkg/apis/certmanager/v1"
-	v1 "github.com/cert-manager/cert-manager/pkg/apis/certmanager/v1"
+	"github.com/cert-manager/cert-manager/internal/cainjector/feature"
+	cmapiv1 "github.com/cert-manager/cert-manager/pkg/apis/certmanager/v1"
 	cmmeta "github.com/cert-manager/cert-manager/pkg/apis/meta/v1"
+	utilfeature "github.com/cert-manager/cert-manager/pkg/util/feature"
 	"github.com/cert-manager/cert-manager/test/unit/gen"
 
 	. "github.com/onsi/ginkgo/v2"
@@ -63,14 +64,14 @@ var _ = framework.CertManagerDescribe("CA Injector", func() {
 				By("creating a self-signing issuer")
 				issuer := gen.Issuer(issuerName,
 					gen.SetIssuerNamespace(f.Namespace.Name),
-					gen.SetIssuerSelfSigned(v1.SelfSignedIssuer{}))
+					gen.SetIssuerSelfSigned(cmapiv1.SelfSignedIssuer{}))
 				Expect(f.CRClient.Create(context.Background(), issuer)).To(Succeed())
 
 				By("Waiting for Issuer to become Ready")
 				err := util.WaitForIssuerCondition(ctx, f.CertManagerClientSet.CertmanagerV1().Issuers(f.Namespace.Name),
 					issuerName,
-					certmanager.IssuerCondition{
-						Type:   certmanager.IssuerConditionReady,
+					cmapiv1.IssuerCondition{
+						Type:   cmapiv1.IssuerConditionReady,
 						Status: cmmeta.ConditionTrue,
 					})
 				Expect(err).NotTo(HaveOccurred())
@@ -82,7 +83,7 @@ var _ = framework.CertManagerDescribe("CA Injector", func() {
 				}
 				Expect(f.CRClient.Delete(context.Background(), toCleanup)).To(Succeed())
 			})
-			generalSetup := func(injectable client.Object) (runtime.Object, *certmanager.Certificate) {
+			generalSetup := func(injectable client.Object) (runtime.Object, *cmapiv1.Certificate) {
 				By("creating a " + subj + " pointing to a cert")
 				Expect(f.CRClient.Create(context.Background(), injectable)).To(Succeed())
 				toCleanup = injectable
@@ -94,7 +95,7 @@ var _ = framework.CertManagerDescribe("CA Injector", func() {
 					gen.SetCertificateSecretName(secretName.Name),
 					gen.SetCertificateIssuer(cmmeta.ObjectReference{
 						Name: issuerName,
-						Kind: certmanager.IssuerKind,
+						Kind: cmapiv1.IssuerKind,
 					}),
 					gen.SetCertificateCommonName("test.domain.com"),
 					gen.SetCertificateOrganization("test-org"),
@@ -161,6 +162,11 @@ var _ = framework.CertManagerDescribe("CA Injector", func() {
 				}
 				injectable, cert := generalSetup(test.makeInjectable("changed"))
 
+				By("grabbing the original secret")
+				var oldSecret corev1.Secret
+				secretName := types.NamespacedName{Name: cert.Spec.SecretName, Namespace: f.Namespace.Name}
+				Expect(f.CRClient.Get(context.Background(), secretName, &oldSecret)).To(Succeed())
+
 				By("changing the name of the corresponding secret in the cert")
 				err := retry.RetryOnConflict(retry.DefaultRetry, func() error {
 					err := f.CRClient.Get(context.Background(), types.NamespacedName{Name: cert.Name, Namespace: cert.Namespace}, cert)
@@ -182,17 +188,24 @@ var _ = framework.CertManagerDescribe("CA Injector", func() {
 				Expect(err).NotTo(HaveOccurred(), "failed to wait for Certificate to become updated")
 
 				By("grabbing the new secret")
-				var secret corev1.Secret
-				secretName := types.NamespacedName{Name: cert.Spec.SecretName, Namespace: f.Namespace.Name}
-				Expect(f.CRClient.Get(context.Background(), secretName, &secret)).To(Succeed())
+				var newSecret corev1.Secret
+				Expect(f.CRClient.Get(context.Background(), secretName, &newSecret)).To(Succeed())
 
 				By("verifying that the hooks have the new data")
-				caData := secret.Data["ca.crt"]
 				expectedLen := len(test.getCAs(injectable))
 				expectedCAs := make([][]byte, expectedLen)
-				for i := range expectedCAs {
-					expectedCAs[i] = caData
+				if utilfeature.DefaultFeatureGate.Enabled(feature.CAInjectorMerging) {
+					caData := append(oldSecret.Data["ca.crt"], newSecret.Data["ca.crt"]...)
+					for i := range expectedCAs {
+						expectedCAs[i] = caData
+					}
+				} else {
+					caData := newSecret.Data["ca.crt"]
+					for i := range expectedCAs {
+						expectedCAs[i] = caData
+					}
 				}
+
 				Eventually(func() ([][]byte, error) {
 					newInjectable := injectable.DeepCopyObject().(client.Object)
 					if err := f.CRClient.Get(context.Background(), types.NamespacedName{Name: injectable.(metav1.Object).GetName()}, newInjectable); err != nil {
@@ -209,7 +222,7 @@ var _ = framework.CertManagerDescribe("CA Injector", func() {
 				By("creating a validating webhook with an invalid cert name")
 				injectable := test.makeInjectable("invalid")
 				injectable.(metav1.Object).SetAnnotations(map[string]string{
-					certmanager.WantInjectAnnotation: "serving-certs", // an invalid annotation
+					cmapiv1.WantInjectAnnotation: "serving-certs", // an invalid annotation
 				})
 				Expect(f.CRClient.Create(context.Background(), injectable)).To(Succeed())
 				toCleanup = injectable
@@ -235,7 +248,7 @@ var _ = framework.CertManagerDescribe("CA Injector", func() {
 				By("creating an injectable with the inject-apiserver-ca annotation")
 				injectable := test.makeInjectable("apiserver-ca")
 				injectable.(metav1.Object).SetAnnotations(map[string]string{
-					certmanager.WantInjectAPIServerCAAnnotation: "true",
+					cmapiv1.WantInjectAPIServerCAAnnotation: "true",
 				})
 				Expect(f.CRClient.Create(context.Background(), injectable)).To(Succeed())
 				toCleanup = injectable
@@ -266,7 +279,7 @@ var _ = framework.CertManagerDescribe("CA Injector", func() {
 						Name:      secretName.Name,
 						Namespace: secretName.Namespace,
 						Annotations: map[string]string{
-							certmanager.AllowsInjectionFromSecretAnnotation: "true",
+							cmapiv1.AllowsInjectionFromSecretAnnotation: "true",
 						},
 					},
 				}
@@ -274,7 +287,7 @@ var _ = framework.CertManagerDescribe("CA Injector", func() {
 
 				injectable := test.makeInjectable("from-secret")
 				injectable.(metav1.Object).SetAnnotations(map[string]string{
-					certmanager.WantInjectFromSecretAnnotation: secretName.String(),
+					cmapiv1.WantInjectFromSecretAnnotation: secretName.String(),
 				})
 				generalSetup(injectable)
 			})
@@ -289,7 +302,7 @@ var _ = framework.CertManagerDescribe("CA Injector", func() {
 						Name:      secretName.Name,
 						Namespace: secretName.Namespace,
 						Annotations: map[string]string{
-							certmanager.AllowsInjectionFromSecretAnnotation: "false",
+							cmapiv1.AllowsInjectionFromSecretAnnotation: "false",
 						},
 					},
 				}
@@ -298,7 +311,7 @@ var _ = framework.CertManagerDescribe("CA Injector", func() {
 				By("creating a " + subj + " pointing to a secret")
 				injectable := test.makeInjectable("from-secret-not-allowed")
 				injectable.(metav1.Object).SetAnnotations(map[string]string{
-					certmanager.WantInjectFromSecretAnnotation: secretName.String(),
+					cmapiv1.WantInjectFromSecretAnnotation: secretName.String(),
 				})
 				Expect(f.CRClient.Create(context.Background(), injectable)).To(Succeed())
 				toCleanup = injectable
@@ -309,7 +322,7 @@ var _ = framework.CertManagerDescribe("CA Injector", func() {
 					gen.SetCertificateSecretName(secretName.Name),
 					gen.SetCertificateIssuer(cmmeta.ObjectReference{
 						Name: issuerName,
-						Kind: certmanager.IssuerKind,
+						Kind: cmapiv1.IssuerKind,
 					}),
 					gen.SetCertificateCommonName("test.domain.com"),
 					gen.SetCertificateOrganization("test-org"),
@@ -346,7 +359,7 @@ var _ = framework.CertManagerDescribe("CA Injector", func() {
 				ObjectMeta: metav1.ObjectMeta{
 					GenerateName: fmt.Sprintf("%s-hook", namePrefix),
 					Annotations: map[string]string{
-						certmanager.WantInjectAnnotation: types.NamespacedName{Name: "serving-certs", Namespace: f.Namespace.Name}.String(),
+						cmapiv1.WantInjectAnnotation: types.NamespacedName{Name: "serving-certs", Namespace: f.Namespace.Name}.String(),
 					},
 				},
 				Webhooks: []admissionreg.ValidatingWebhook{
@@ -389,7 +402,7 @@ var _ = framework.CertManagerDescribe("CA Injector", func() {
 				ObjectMeta: metav1.ObjectMeta{
 					GenerateName: fmt.Sprintf("%s-hook", namePrefix),
 					Annotations: map[string]string{
-						certmanager.WantInjectAnnotation: types.NamespacedName{Name: "serving-certs", Namespace: f.Namespace.Name}.String(),
+						cmapiv1.WantInjectAnnotation: types.NamespacedName{Name: "serving-certs", Namespace: f.Namespace.Name}.String(),
 					},
 				},
 				Webhooks: []admissionreg.MutatingWebhook{
@@ -434,7 +447,7 @@ var _ = framework.CertManagerDescribe("CA Injector", func() {
 				ObjectMeta: metav1.ObjectMeta{
 					Name: "objs." + namePrefix + ".testing.cert-manager.io",
 					Annotations: map[string]string{
-						certmanager.WantInjectAnnotation: types.NamespacedName{Name: "serving-certs", Namespace: f.Namespace.Name}.String(),
+						cmapiv1.WantInjectAnnotation: types.NamespacedName{Name: "serving-certs", Namespace: f.Namespace.Name}.String(),
 					},
 				},
 				Spec: apiext.CustomResourceDefinitionSpec{
@@ -475,7 +488,7 @@ var _ = framework.CertManagerDescribe("CA Injector", func() {
 				ObjectMeta: metav1.ObjectMeta{
 					Name: "v1." + namePrefix + ".testing.cert-manager.io",
 					Annotations: map[string]string{
-						certmanager.WantInjectAnnotation: types.NamespacedName{Name: "serving-certs", Namespace: f.Namespace.Name}.String(),
+						cmapiv1.WantInjectAnnotation: types.NamespacedName{Name: "serving-certs", Namespace: f.Namespace.Name}.String(),
 					},
 				},
 				Spec: apireg.APIServiceSpec{

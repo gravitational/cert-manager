@@ -93,7 +93,7 @@ func (c *controller) Register(ctx *controllerpkg.Context) (workqueue.TypedRateLi
 	if _, err := issuerInformer.Informer().AddEventHandler(&controllerpkg.QueuingEventHandler{Queue: c.queue}); err != nil {
 		return nil, nil, fmt.Errorf("error setting up event handler: %v", err)
 	}
-	if _, err := secretInformer.Informer().AddEventHandler(&controllerpkg.BlockingEventHandler{WorkFunc: c.secretDeleted}); err != nil {
+	if _, err := secretInformer.Informer().AddEventHandler(&controllerpkg.BlockingEventHandler{WorkFunc: c.secretEvent}); err != nil {
 		return nil, nil, fmt.Errorf("error setting up event handler: %v", err)
 	}
 
@@ -107,8 +107,8 @@ func (c *controller) Register(ctx *controllerpkg.Context) (workqueue.TypedRateLi
 }
 
 // TODO: replace with generic handleObject function (like Navigator)
-func (c *controller) secretDeleted(obj interface{}) {
-	log := c.log.WithName("secretDeleted")
+func (c *controller) secretEvent(obj interface{}) {
+	log := c.log.WithName("secretEvent")
 	secret, ok := controllerpkg.ToSecret(obj)
 	if !ok {
 		log.Error(nil, "object is not a secret", "object", obj)
@@ -122,7 +122,7 @@ func (c *controller) secretDeleted(obj interface{}) {
 		return
 	}
 	for _, iss := range issuers {
-		c.queue.AddRateLimited(types.NamespacedName{
+		c.queue.Add(types.NamespacedName{
 			Name:      iss.Name,
 			Namespace: iss.Namespace,
 		})
@@ -134,13 +134,12 @@ func (c *controller) ProcessItem(ctx context.Context, key types.NamespacedName) 
 	namespace, name := key.Namespace, key.Name
 
 	issuer, err := c.issuerLister.Issuers(namespace).Get(name)
-	if err != nil {
-		if k8sErrors.IsNotFound(err) {
-			log.Error(err, "issuer in work queue no longer exists")
-			return nil
-		}
-
+	if err != nil && !k8sErrors.IsNotFound(err) {
 		return err
+	}
+	if issuer == nil || issuer.DeletionTimestamp != nil {
+		// If the Issuer object was/ is being deleted, we don't want to update its status.
+		return nil
 	}
 
 	ctx = logf.NewContext(ctx, logf.WithResource(log, issuer))

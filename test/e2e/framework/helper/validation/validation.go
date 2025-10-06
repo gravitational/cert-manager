@@ -18,6 +18,7 @@ package validation
 
 import (
 	"github.com/cert-manager/cert-manager/e2e-tests/framework/helper/featureset"
+	"github.com/cert-manager/cert-manager/e2e-tests/framework/helper/validation/certificaterequests"
 	"github.com/cert-manager/cert-manager/e2e-tests/framework/helper/validation/certificates"
 	"github.com/cert-manager/cert-manager/e2e-tests/framework/helper/validation/certificatesigningrequests"
 )
@@ -55,8 +56,14 @@ func DefaultCertificateSigningRequestSet() []certificatesigningrequests.Validati
 		certificatesigningrequests.ExpectEmailsToMatch,
 		certificatesigningrequests.ExpectIsCA,
 		certificatesigningrequests.ExpectConditionApproved,
-		certificatesigningrequests.ExpectConditiotNotDenied,
+		certificatesigningrequests.ExpectConditionNotDenied,
 		certificatesigningrequests.ExpectConditionNotFailed,
+	}
+}
+
+func DefaultCertificateRequestSet() []certificaterequests.ValidationFunc {
+	return []certificaterequests.ValidationFunc{
+		// TODO: add validation functions
 	}
 }
 
@@ -68,11 +75,14 @@ func CertificateSetForUnsupportedFeatureSet(fs featureset.FeatureSet) []certific
 		certificates.ExpectCertificateOrganizationToMatch,
 		certificates.ExpectValidAnnotations,
 		certificates.ExpectValidCertificate,
-		certificates.ExpectValidCommonName,
 		certificates.ExpectValidNotAfterDate,
 		certificates.ExpectValidPrivateKeyData,
 		certificates.ExpectConditionReadyObservedGeneration,
 		certificates.ExpectValidBasicConstraints,
+	}
+
+	if !fs.Has(featureset.CommonNameFeature) {
+		out = append(out, certificates.ExpectValidCommonName)
 	}
 
 	if !fs.Has(featureset.URISANsFeature) {

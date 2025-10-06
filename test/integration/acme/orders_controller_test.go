@@ -22,7 +22,6 @@ import (
 	"testing"
 	"time"
 
-	acmeapi "golang.org/x/crypto/acme"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/wait"
@@ -38,6 +37,7 @@ import (
 	logf "github.com/cert-manager/cert-manager/pkg/logs"
 	"github.com/cert-manager/cert-manager/pkg/metrics"
 	"github.com/cert-manager/cert-manager/test/unit/gen"
+	acmeapi "github.com/cert-manager/cert-manager/third_party/forked/acme"
 )
 
 func TestAcmeOrdersController(t *testing.T) {
@@ -213,11 +213,11 @@ func TestAcmeOrdersController(t *testing.T) {
 	// Wait for the Challenge to be created.
 	var chal *cmacme.Challenge
 	err = wait.PollUntilContextCancel(ctx, time.Millisecond*100, true, func(ctx context.Context) (done bool, err error) {
-		chals, err := cmCl.AcmeV1().Challenges(testName).List(ctx, metav1.ListOptions{})
+		challenges, err := cmCl.AcmeV1().Challenges(testName).List(ctx, metav1.ListOptions{})
 		if err != nil {
 			return false, err
 		}
-		l := len(chals.Items)
+		l := len(challenges.Items)
 		// Challenge has not been created yet
 		if l == 0 {
 			return false, nil
@@ -227,7 +227,7 @@ func TestAcmeOrdersController(t *testing.T) {
 			return false, fmt.Errorf("expected maximum 1 challenge, got %d", l)
 		}
 		// Check that the Challenge is owned by our Order.
-		chal = &chals.Items[0]
+		chal = &challenges.Items[0]
 		if !metav1.IsControlledBy(chal, order) {
 			return false, fmt.Errorf("found an unexpected Challenge resource: %v", chal.Name)
 		}

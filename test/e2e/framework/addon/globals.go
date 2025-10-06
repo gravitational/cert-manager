@@ -19,6 +19,7 @@ package addon
 import (
 	"context"
 	"fmt"
+	"slices"
 
 	utilerrors "k8s.io/apimachinery/pkg/util/errors"
 
@@ -80,7 +81,7 @@ func InitGlobals(cfg *config.Config) {
 	}
 }
 
-// SetupGlobals setups all of the global addons.
+// SetupGlobalsPrimary setups all of the global addons.
 // The primary ginkgo process is the process with index 1.
 // This function should be called by the test suite entrypoint in a SynchronizedBeforeSuite
 // block to ensure it is run only on ginkgo process #1. It has to be run before
@@ -126,7 +127,7 @@ func SetupGlobalsNonPrimary(cfg *config.Config, transferred []AddonTransferableD
 // This should be called by the test suite in a SynchronizedBeforeSuite block
 // after the Setup data has been transferred to all ginkgo processes, so that
 // not all processes have to wait for the addons to be provisioned. Instead,
-// the individual test has to check that the addon is provisioned (eg. by querying
+// the individual test has to check that the addon is provisioned (e.g., by querying
 // the API server for a resource that the addon creates or by checking that an
 // HTTP endpoint is available)
 // This function should be run only on ginkgo process #1.
@@ -141,10 +142,10 @@ func ProvisionGlobals(ctx context.Context, cfg *config.Config) error {
 }
 
 type loggableAddon interface {
-	Logs() (map[string]string, error)
+	Logs(ctx context.Context) (map[string]string, error)
 }
 
-func GlobalLogs() (map[string]string, error) {
+func GlobalLogs(ctx context.Context) (map[string]string, error) {
 	out := make(map[string]string)
 	for _, p := range provisioned {
 		p, ok := p.(loggableAddon)
@@ -152,7 +153,7 @@ func GlobalLogs() (map[string]string, error) {
 			continue
 		}
 
-		l, err := p.Logs()
+		l, err := p.Logs(ctx)
 		if err != nil {
 			return nil, err
 		}
@@ -178,8 +179,7 @@ func DeprovisionGlobals(ctx context.Context, cfg *config.Config) error {
 	}
 	var errs []error
 	// deprovision addons in the reverse order to that of provisioning
-	for i := len(provisioned) - 1; i >= 0; i-- {
-		a := provisioned[i]
+	for _, a := range slices.Backward(provisioned) {
 		errs = append(errs, a.Deprovision(ctx))
 	}
 	return utilerrors.NewAggregate(errs)

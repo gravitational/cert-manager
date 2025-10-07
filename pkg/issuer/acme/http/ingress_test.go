@@ -22,6 +22,7 @@ import (
 	"reflect"
 	"testing"
 
+	"github.com/google/go-cmp/cmp"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	networkingv1 "k8s.io/api/networking/v1"
@@ -29,11 +30,13 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/apimachinery/pkg/util/diff"
 	coretesting "k8s.io/client-go/testing"
+	featuregatetesting "k8s.io/component-base/featuregate/testing"
 
+	internalfeature "github.com/cert-manager/cert-manager/internal/controller/feature"
 	cmacme "github.com/cert-manager/cert-manager/pkg/apis/acme/v1"
 	"github.com/cert-manager/cert-manager/pkg/controller/test"
+	"github.com/cert-manager/cert-manager/pkg/util/feature"
 )
 
 func TestGetIngressesForChallenge(t *testing.T) {
@@ -69,6 +72,80 @@ func TestGetIngressesForChallenge(t *testing.T) {
 				}
 				if !reflect.DeepEqual(resp[0], createdIngress) {
 					t.Errorf("Expected %v to equal %v", resp[0], createdIngress)
+				}
+			},
+		},
+		"should return one ingress with pathType Exact": {
+			Challenge: &cmacme.Challenge{
+				Spec: cmacme.ChallengeSpec{
+					DNSName: "example.com",
+					Solver: cmacme.ACMEChallengeSolver{
+						HTTP01: &cmacme.ACMEChallengeSolverHTTP01{
+							Ingress: &cmacme.ACMEChallengeSolverHTTP01Ingress{},
+						},
+					},
+				},
+			},
+			PreFn: func(t *testing.T, s *solverFixture) {
+				featuregatetesting.SetFeatureGateDuringTest(t, feature.DefaultFeatureGate, internalfeature.ACMEHTTP01IngressPathTypeExact, true)
+				ing, err := s.Solver.createIngress(t.Context(), s.Challenge, "fakeservice")
+				if err != nil {
+					t.Errorf("error preparing test: %v", err)
+				}
+
+				s.testResources[createdIngressKey] = ing
+				s.Builder.Sync()
+			},
+			CheckFn: func(t *testing.T, s *solverFixture, args ...interface{}) {
+				createdIngress := s.testResources[createdIngressKey].(*networkingv1.Ingress)
+				resp := args[0].([]*networkingv1.Ingress)
+				if len(resp) != 1 {
+					t.Errorf("expected one ingress to be returned, but got %d", len(resp))
+					t.Fail()
+					return
+				}
+				if !reflect.DeepEqual(resp[0], createdIngress) {
+					t.Errorf("Expected %v to equal %v", resp[0], createdIngress)
+				}
+				if *resp[0].Spec.Rules[0].HTTP.Paths[0].PathType != networkingv1.PathTypeExact {
+					t.Errorf("Expected pathType to be Exact, but got %s", *resp[0].Spec.Rules[0].HTTP.Paths[0].PathType)
+				}
+			},
+		},
+		"should return one ingress with pathType ImplementationSpecific": {
+			Challenge: &cmacme.Challenge{
+				Spec: cmacme.ChallengeSpec{
+					DNSName: "example.com",
+					Solver: cmacme.ACMEChallengeSolver{
+						HTTP01: &cmacme.ACMEChallengeSolverHTTP01{
+							Ingress: &cmacme.ACMEChallengeSolverHTTP01Ingress{},
+						},
+					},
+				},
+			},
+			PreFn: func(t *testing.T, s *solverFixture) {
+				featuregatetesting.SetFeatureGateDuringTest(t, feature.DefaultFeatureGate, internalfeature.ACMEHTTP01IngressPathTypeExact, false)
+				ing, err := s.Solver.createIngress(t.Context(), s.Challenge, "fakeservice")
+				if err != nil {
+					t.Errorf("error preparing test: %v", err)
+				}
+
+				s.testResources[createdIngressKey] = ing
+				s.Builder.Sync()
+			},
+			CheckFn: func(t *testing.T, s *solverFixture, args ...interface{}) {
+				createdIngress := s.testResources[createdIngressKey].(*networkingv1.Ingress)
+				resp := args[0].([]*networkingv1.Ingress)
+				if len(resp) != 1 {
+					t.Errorf("expected one ingress to be returned, but got %d", len(resp))
+					t.Fail()
+					return
+				}
+				if !reflect.DeepEqual(resp[0], createdIngress) {
+					t.Errorf("Expected %v to equal %v", resp[0], createdIngress)
+				}
+				if *resp[0].Spec.Rules[0].HTTP.Paths[0].PathType != networkingv1.PathTypeImplementationSpecific {
+					t.Errorf("Expected pathType to be ImplementationSpecific, but got %s", *resp[0].Spec.Rules[0].HTTP.Paths[0].PathType)
 				}
 			},
 		},
@@ -295,8 +372,8 @@ func TestCleanupIngresses(t *testing.T) {
 					t.Errorf("error getting ingress resource: %v", err)
 				}
 
-				if !reflect.DeepEqual(expectedIng, actualIng) {
-					t.Errorf("expected did not match actual: %v", diff.ObjectDiff(expectedIng, actualIng))
+				if diff := cmp.Diff(expectedIng, actualIng); diff != "" {
+					t.Errorf("expected did not match actual (-want +got):\n%s", diff)
 				}
 			},
 		},
@@ -394,8 +471,8 @@ func TestCleanupIngresses(t *testing.T) {
 					t.Errorf("error getting ingress resource: %v", err)
 				}
 
-				if !reflect.DeepEqual(expectedIng, actualIng) {
-					t.Errorf("expected did not match actual: %v", diff.ObjectDiff(expectedIng, actualIng))
+				if diff := cmp.Diff(expectedIng, actualIng); diff != "" {
+					t.Errorf("expected did not match actual (-want +got):\n%s", diff)
 				}
 			},
 		},

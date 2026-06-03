@@ -22,16 +22,16 @@ import (
 	"sync"
 	"testing"
 
-	fuzz "github.com/google/gofuzz"
 	"github.com/stretchr/testify/assert"
+	"sigs.k8s.io/randfill"
 
 	cmacme "github.com/cert-manager/cert-manager/pkg/apis/acme/v1"
 )
 
 func Test_serializeApplyStatus(t *testing.T) {
 	const (
-		expReg   = `^{"kind":"Order","apiVersion":"acme.cert-manager.io/v1","metadata":{"name":"foo","namespace":"bar","creationTimestamp":null},"spec":{"request":null,"issuerRef":{"name":""}},"status":{.*}$`
-		expEmpty = `{"kind":"Order","apiVersion":"acme.cert-manager.io/v1","metadata":{"name":"foo","namespace":"bar","creationTimestamp":null},"spec":{"request":null,"issuerRef":{"name":""}},"status":{}}`
+		expReg   = `^{"kind":"Order","apiVersion":"acme.cert-manager.io/v1","metadata":{"name":"foo","namespace":"bar"},"spec":{"request":null,"issuerRef":{"name":""}},"status":{.*}$`
+		expEmpty = `{"kind":"Order","apiVersion":"acme.cert-manager.io/v1","metadata":{"name":"foo","namespace":"bar"},"spec":{"request":null,"issuerRef":{"name":""}},"status":{}}`
 		numJobs  = 10000
 	)
 
@@ -44,7 +44,7 @@ func Test_serializeApplyStatus(t *testing.T) {
 			for j := range jobs {
 				t.Run("fuzz_"+strconv.Itoa(j), func(t *testing.T) {
 					var order cmacme.Order
-					fuzz.New().NilChance(0.5).Fuzz(&order)
+					randfill.New().NilChance(0.5).Fill(&order)
 					order.Name = "foo"
 					order.Namespace = "bar"
 

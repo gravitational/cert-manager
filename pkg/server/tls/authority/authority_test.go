@@ -17,7 +17,6 @@ limitations under the License.
 package authority
 
 import (
-	"context"
 	"crypto/ecdsa"
 	"crypto/elliptic"
 	"crypto/rand"
@@ -60,16 +59,14 @@ func testAuthority(t *testing.T, name string, cs *kubefake.Clientset) *DynamicAu
 		},
 	}
 
-	runCtx, cancel := context.WithCancel(context.Background())
 	done := make(chan struct{})
 	go func() {
 		defer close(done)
-		if err := da.Run(logf.NewContext(runCtx, logger)); err != nil {
+		if err := da.Run(logf.NewContext(t.Context(), logger)); err != nil {
 			t.Error(err)
 		}
 	}()
 	t.Cleanup(func() {
-		cancel()
 		<-done
 	})
 
@@ -77,7 +74,7 @@ func testAuthority(t *testing.T, name string, cs *kubefake.Clientset) *DynamicAu
 }
 
 func TestDynamicAuthority(t *testing.T) {
-	fake := kubefake.NewSimpleClientset()
+	fake := kubefake.NewClientset()
 
 	da := testAuthority(t, "authority", fake)
 
@@ -119,26 +116,26 @@ func TestDynamicAuthority(t *testing.T) {
 
 	waitForRotationAndSign(true)
 
-	err := fake.CoreV1().Secrets(da.SecretNamespace).Delete(context.TODO(), da.SecretName, metav1.DeleteOptions{})
+	err := fake.CoreV1().Secrets(da.SecretNamespace).Delete(t.Context(), da.SecretName, metav1.DeleteOptions{})
 	assert.NoError(t, err)
 
 	waitForRotationAndSign(false)
 
-	secret, err := fake.CoreV1().Secrets(da.SecretNamespace).Get(context.TODO(), da.SecretName, metav1.GetOptions{})
+	secret, err := fake.CoreV1().Secrets(da.SecretNamespace).Get(t.Context(), da.SecretName, metav1.GetOptions{})
 	assert.NoError(t, err)
 
 	secret.Data = map[string][]byte{
 		"tls.crt": []byte("test"),
 		"tls.key": []byte("test"),
 	}
-	_, err = fake.CoreV1().Secrets(da.SecretNamespace).Update(context.TODO(), secret, metav1.UpdateOptions{})
+	_, err = fake.CoreV1().Secrets(da.SecretNamespace).Update(t.Context(), secret, metav1.UpdateOptions{})
 	assert.NoError(t, err)
 
 	waitForRotationAndSign(false)
 }
 
 func TestDynamicAuthorityMulti(t *testing.T) {
-	fake := kubefake.NewSimpleClientset()
+	fake := kubefake.NewClientset()
 
 	authorities := make([]*DynamicAuthority, 0)
 	for i := range 200 {
@@ -191,12 +188,8 @@ func Test__caRequiresRegeneration(t *testing.T) {
 		assert.NoError(t, err)
 		pkBytes, err := pki.EncodePrivateKey(pk, cmapi.PKCS8)
 		assert.NoError(t, err)
-		serialNumber, err := rand.Int(rand.Reader, serialNumberLimit)
-		assert.NoError(t, err)
 		cert := &x509.Certificate{
-			Version:               3,
 			BasicConstraintsValid: true,
-			SerialNumber:          serialNumber,
 			PublicKeyAlgorithm:    x509.ECDSA,
 			Subject: pkix.Name{
 				CommonName: "cert-manager-webhook-ca",

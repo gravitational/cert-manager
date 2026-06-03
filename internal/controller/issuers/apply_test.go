@@ -22,16 +22,16 @@ import (
 	"sync"
 	"testing"
 
-	fuzz "github.com/google/gofuzz"
 	"github.com/stretchr/testify/assert"
+	"sigs.k8s.io/randfill"
 
 	cmapi "github.com/cert-manager/cert-manager/pkg/apis/certmanager/v1"
 )
 
 func Test_serializeApplyIssuerStatus(t *testing.T) {
 	const (
-		expReg   = `^{"kind":"Issuer","apiVersion":"cert-manager.io/v1","metadata":{"name":"foo","namespace":"bar","creationTimestamp":null},"spec":{},"status":{.*}$`
-		expEmpty = `{"kind":"Issuer","apiVersion":"cert-manager.io/v1","metadata":{"name":"foo","namespace":"bar","creationTimestamp":null},"spec":{},"status":{}}`
+		expReg   = `^{"kind":"Issuer","apiVersion":"cert-manager.io/v1","metadata":{"name":"foo","namespace":"bar"},"spec":{},"status":{.*}$`
+		expEmpty = `{"kind":"Issuer","apiVersion":"cert-manager.io/v1","metadata":{"name":"foo","namespace":"bar"},"spec":{},"status":{}}`
 		numJobs  = 10000
 	)
 
@@ -44,7 +44,7 @@ func Test_serializeApplyIssuerStatus(t *testing.T) {
 			for j := range jobs {
 				t.Run("fuzz_"+strconv.Itoa(j), func(t *testing.T) {
 					var issuer cmapi.Issuer
-					fuzz.New().NilChance(0.5).Fuzz(&issuer)
+					randfill.New().NilChance(0.5).Fill(&issuer)
 					issuer.Name = "foo"
 					issuer.Namespace = "bar"
 
@@ -79,8 +79,8 @@ func Test_serializeApplyIssuerStatus(t *testing.T) {
 
 func Test_serializeApplyClusterIssuerStatus(t *testing.T) {
 	const (
-		expReg   = `^{"kind":"ClusterIssuer","apiVersion":"cert-manager.io/v1","metadata":{"name":"foo","creationTimestamp":null},"spec":{},"status":{.*}$`
-		expEmpty = `{"kind":"ClusterIssuer","apiVersion":"cert-manager.io/v1","metadata":{"name":"foo","creationTimestamp":null},"spec":{},"status":{}}`
+		expReg   = `^{"kind":"ClusterIssuer","apiVersion":"cert-manager.io/v1","metadata":{"name":"foo"},"spec":{},"status":{.*}$`
+		expEmpty = `{"kind":"ClusterIssuer","apiVersion":"cert-manager.io/v1","metadata":{"name":"foo"},"spec":{},"status":{}}`
 		numJobs  = 10000
 	)
 
@@ -93,7 +93,7 @@ func Test_serializeApplyClusterIssuerStatus(t *testing.T) {
 			for j := range jobs {
 				t.Run("fuzz_"+strconv.Itoa(j), func(t *testing.T) {
 					var issuer cmapi.ClusterIssuer
-					fuzz.New().NilChance(0.5).Fuzz(&issuer)
+					randfill.New().NilChance(0.5).Fill(&issuer)
 					issuer.Name = "foo"
 
 					// Test regex with non-empty status.

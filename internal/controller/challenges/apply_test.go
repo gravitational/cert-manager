@@ -22,9 +22,9 @@ import (
 	"sync"
 	"testing"
 
-	fuzz "github.com/google/gofuzz"
 	"github.com/stretchr/testify/assert"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
+	"sigs.k8s.io/randfill"
 
 	cmacme "github.com/cert-manager/cert-manager/pkg/apis/acme/v1"
 )
@@ -44,14 +44,14 @@ func Test_serializeApply(t *testing.T) {
 			for j := range jobs {
 				t.Run("fuzz_"+strconv.Itoa(j), func(t *testing.T) {
 					var challenge cmacme.Challenge
-					fuzz.New().NilChance(0.5).Funcs(
-						func(challenge *cmacme.Challenge, c fuzz.Continue) {
+					randfill.New().NilChance(0.5).Funcs(
+						func(challenge *cmacme.Challenge, c randfill.Continue) {
 							if challenge.Spec.Solver.DNS01 != nil && challenge.Spec.Solver.DNS01.Webhook != nil {
 								// Config can only hold data which originates from proper JSON.
 								challenge.Spec.Solver.DNS01.Webhook.Config = &apiextensionsv1.JSON{Raw: []byte(`{"some": {"json": "test"}, "string": 42}`)}
 							}
 						},
-					).Fuzz(&challenge)
+					).Fill(&challenge)
 
 					// Test regex with non-empty status.
 					challengeData, err := serializeApply(&challenge)
@@ -78,8 +78,8 @@ func Test_serializeApply(t *testing.T) {
 
 func Test_serializeApplyStatus(t *testing.T) {
 	const (
-		expReg   = `^{"kind":"Challenge","apiVersion":"acme.cert-manager.io/v1","metadata":{"name":"foo","namespace":"bar","creationTimestamp":null},"spec":{"url":"","authorizationURL":"","dnsName":"","wildcard":false,"type":"","token":"","key":"","solver":{},"issuerRef":{"name":""}},"status":{.*}$`
-		expEmpty = `{"kind":"Challenge","apiVersion":"acme.cert-manager.io/v1","metadata":{"name":"foo","namespace":"bar","creationTimestamp":null},"spec":{"url":"","authorizationURL":"","dnsName":"","wildcard":false,"type":"","token":"","key":"","solver":{},"issuerRef":{"name":""}},"status":{"processing":false,"presented":false}}`
+		expReg   = `^{"kind":"Challenge","apiVersion":"acme.cert-manager.io/v1","metadata":{"name":"foo","namespace":"bar"},"spec":{"url":"","authorizationURL":"","dnsName":"","wildcard":false,"type":"","token":"","key":"","solver":{},"issuerRef":{"name":""}},"status":{.*}$`
+		expEmpty = `{"kind":"Challenge","apiVersion":"acme.cert-manager.io/v1","metadata":{"name":"foo","namespace":"bar"},"spec":{"url":"","authorizationURL":"","dnsName":"","wildcard":false,"type":"","token":"","key":"","solver":{},"issuerRef":{"name":""}},"status":{"processing":false,"presented":false}}`
 		numJobs  = 10000
 	)
 
@@ -92,7 +92,7 @@ func Test_serializeApplyStatus(t *testing.T) {
 			for j := range jobs {
 				t.Run("fuzz_"+strconv.Itoa(j), func(t *testing.T) {
 					var challenge cmacme.Challenge
-					fuzz.New().NilChance(0.5).Fuzz(&challenge)
+					randfill.New().NilChance(0.5).Fill(&challenge)
 					challenge.Name = "foo"
 					challenge.Namespace = "bar"
 

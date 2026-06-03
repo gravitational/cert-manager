@@ -17,7 +17,6 @@ limitations under the License.
 package shimhelper
 
 import (
-	"context"
 	"errors"
 	"reflect"
 	"testing"
@@ -135,7 +134,7 @@ func TestSync(t *testing.T) {
 						DNSNames:   []string{"example.com", "www.example.com"},
 						CommonName: "my-cn",
 						SecretName: "example-com-tls",
-						IssuerRef: cmmeta.ObjectReference{
+						IssuerRef: cmmeta.IssuerReference{
 							Name: "issuer-name",
 							Kind: "ClusterIssuer",
 						},
@@ -186,7 +185,7 @@ func TestSync(t *testing.T) {
 						IPAddresses: []string{"10.112.234.34", "1.1.1.1"},
 						CommonName:  "my-cn",
 						SecretName:  "example-com-tls",
-						IssuerRef: cmmeta.ObjectReference{
+						IssuerRef: cmmeta.IssuerReference{
 							Name: "issuer-name",
 							Kind: "ClusterIssuer",
 						},
@@ -237,7 +236,7 @@ func TestSync(t *testing.T) {
 						IPAddresses: []string{"2a00:1450:4009:819::aaaa", "2a00:1450:4009:819::eeee"},
 						CommonName:  "my-cn",
 						SecretName:  "example-com-tls",
-						IssuerRef: cmmeta.ObjectReference{
+						IssuerRef: cmmeta.IssuerReference{
 							Name: "issuer-name",
 							Kind: "ClusterIssuer",
 						},
@@ -288,7 +287,7 @@ func TestSync(t *testing.T) {
 						IPAddresses: []string{"1.1.1.1", "2a00:1450:4009:819::eeee"},
 						CommonName:  "my-cn",
 						SecretName:  "example-com-tls",
-						IssuerRef: cmmeta.ObjectReference{
+						IssuerRef: cmmeta.IssuerReference{
 							Name: "issuer-name",
 							Kind: "ClusterIssuer",
 						},
@@ -341,7 +340,7 @@ func TestSync(t *testing.T) {
 					Spec: cmapi.CertificateSpec{
 						DNSNames:   []string{"example.com", "www.example.com"},
 						SecretName: "example-com-tls",
-						IssuerRef: cmmeta.ObjectReference{
+						IssuerRef: cmmeta.IssuerReference{
 							Name: "issuer-name",
 							Kind: "ClusterIssuer",
 						},
@@ -394,7 +393,7 @@ func TestSync(t *testing.T) {
 					Spec: cmapi.CertificateSpec{
 						DNSNames:   []string{"example.com", "www.example.com"},
 						SecretName: "example-com-tls",
-						IssuerRef: cmmeta.ObjectReference{
+						IssuerRef: cmmeta.IssuerReference{
 							Name: "issuer-name",
 							Kind: "ClusterIssuer",
 						},
@@ -436,7 +435,7 @@ func TestSync(t *testing.T) {
 					Spec: cmapi.CertificateSpec{
 						DNSNames:   []string{"example.com", "www.example.com"},
 						SecretName: "example-com-tls",
-						IssuerRef: cmmeta.ObjectReference{
+						IssuerRef: cmmeta.IssuerReference{
 							Name: "issuer-name",
 							Kind: "ClusterIssuer",
 						},
@@ -479,7 +478,7 @@ func TestSync(t *testing.T) {
 					Spec: cmapi.CertificateSpec{
 						DNSNames:   []string{"example.com", "www.example.com"},
 						SecretName: "example-com-tls",
-						IssuerRef: cmmeta.ObjectReference{
+						IssuerRef: cmmeta.IssuerReference{
 							Name: "issuer-name",
 							Kind: "ClusterIssuer",
 						},
@@ -526,7 +525,7 @@ func TestSync(t *testing.T) {
 					Spec: cmapi.CertificateSpec{
 						DNSNames:   []string{"example.com", "www.example.com"},
 						SecretName: "example-com-tls",
-						IssuerRef: cmmeta.ObjectReference{
+						IssuerRef: cmmeta.IssuerReference{
 							Name: "issuer-name",
 							Kind: "ClusterIssuer",
 						},
@@ -577,7 +576,7 @@ func TestSync(t *testing.T) {
 								"example-label": "dummy-value",
 							},
 						},
-						IssuerRef: cmmeta.ObjectReference{
+						IssuerRef: cmmeta.IssuerReference{
 							Name: "issuer-name",
 							Kind: "ClusterIssuer",
 						},
@@ -669,7 +668,7 @@ func TestSync(t *testing.T) {
 					Spec: cmapi.CertificateSpec{
 						DNSNames:   []string{"example.com", "www.example.com"},
 						SecretName: "example-com-tls",
-						IssuerRef: cmmeta.ObjectReference{
+						IssuerRef: cmmeta.IssuerReference{
 							Name: "issuer-name",
 							Kind: "ClusterIssuer",
 						},
@@ -711,7 +710,7 @@ func TestSync(t *testing.T) {
 					Spec: cmapi.CertificateSpec{
 						DNSNames:   []string{"example.com", "www.example.com"},
 						SecretName: "example-com-tls",
-						IssuerRef: cmmeta.ObjectReference{
+						IssuerRef: cmmeta.IssuerReference{
 							Name: "issuer-name",
 							Kind: "ClusterIssuer",
 						},
@@ -756,7 +755,7 @@ func TestSync(t *testing.T) {
 					Spec: cmapi.CertificateSpec{
 						DNSNames:   []string{"example.com", "www.example.com"},
 						SecretName: "example-com-tls",
-						IssuerRef: cmmeta.ObjectReference{
+						IssuerRef: cmmeta.IssuerReference{
 							Name:  "issuer-name",
 							Kind:  "ClusterIssuer",
 							Group: "cert-manager.io",
@@ -806,7 +805,7 @@ func TestSync(t *testing.T) {
 						DNSNames:   []string{"example.com", "www.example.com"},
 						SecretName: "example-com-tls",
 						Usages:     cmapi.DefaultKeyUsages(),
-						IssuerRef: cmmeta.ObjectReference{
+						IssuerRef: cmmeta.IssuerReference{
 							Name: "issuer-name",
 							Kind: "Issuer",
 						},
@@ -855,7 +854,7 @@ func TestSync(t *testing.T) {
 						DNSNames:   []string{"example.com", "www.example.com"},
 						SecretName: "example-com-tls",
 						Usages:     cmapi.DefaultKeyUsages(),
-						IssuerRef: cmmeta.ObjectReference{
+						IssuerRef: cmmeta.IssuerReference{
 							Name: "issuer-name",
 							Kind: "Issuer",
 						},
@@ -910,7 +909,7 @@ func TestSync(t *testing.T) {
 					Spec: cmapi.CertificateSpec{
 						DNSNames:   []string{"example.com"},
 						SecretName: "existing-crt",
-						IssuerRef: cmmeta.ObjectReference{
+						IssuerRef: cmmeta.IssuerReference{
 							Name:  "issuer-name",
 							Kind:  "Issuer",
 							Group: "cert-manager.io",
@@ -960,7 +959,7 @@ func TestSync(t *testing.T) {
 					Spec: cmapi.CertificateSpec{
 						DNSNames:   []string{"example.com"},
 						SecretName: "existing-crt",
-						IssuerRef: cmmeta.ObjectReference{
+						IssuerRef: cmmeta.IssuerReference{
 							Name: "issuer-name",
 							Kind: "Issuer",
 						},
@@ -1008,7 +1007,7 @@ func TestSync(t *testing.T) {
 					Spec: cmapi.CertificateSpec{
 						DNSNames:   []string{"example.com"},
 						SecretName: "cert-secret-name",
-						IssuerRef: cmmeta.ObjectReference{
+						IssuerRef: cmmeta.IssuerReference{
 							Name: "issuer-name",
 							Kind: "Issuer",
 						},
@@ -1030,7 +1029,7 @@ func TestSync(t *testing.T) {
 					Spec: cmapi.CertificateSpec{
 						DNSNames:   []string{"example.com"},
 						SecretName: "cert-secret-name",
-						IssuerRef: cmmeta.ObjectReference{
+						IssuerRef: cmmeta.IssuerReference{
 							Name: "issuer-name",
 							Kind: "Issuer",
 						},
@@ -1073,7 +1072,7 @@ func TestSync(t *testing.T) {
 					Spec: cmapi.CertificateSpec{
 						DNSNames:   []string{"example.com"},
 						SecretName: "cert-secret-name",
-						IssuerRef: cmmeta.ObjectReference{
+						IssuerRef: cmmeta.IssuerReference{
 							Name: "issuer-name",
 							Kind: "Issuer",
 						},
@@ -1093,7 +1092,7 @@ func TestSync(t *testing.T) {
 					Spec: cmapi.CertificateSpec{
 						DNSNames:   []string{"example.com"},
 						SecretName: "cert-secret-name",
-						IssuerRef: cmmeta.ObjectReference{
+						IssuerRef: cmmeta.IssuerReference{
 							Name: "issuer-name",
 							Kind: "Issuer",
 						},
@@ -1138,7 +1137,7 @@ func TestSync(t *testing.T) {
 					Spec: cmapi.CertificateSpec{
 						DNSNames:   []string{"example.com"},
 						SecretName: "cert-secret-name",
-						IssuerRef: cmmeta.ObjectReference{
+						IssuerRef: cmmeta.IssuerReference{
 							Name: "issuer-name",
 							Kind: "Issuer",
 						},
@@ -1161,7 +1160,7 @@ func TestSync(t *testing.T) {
 					Spec: cmapi.CertificateSpec{
 						DNSNames:   []string{"example.com"},
 						SecretName: "cert-secret-name",
-						IssuerRef: cmmeta.ObjectReference{
+						IssuerRef: cmmeta.IssuerReference{
 							Name: "issuer-name",
 							Kind: "Issuer",
 						},
@@ -1209,7 +1208,7 @@ func TestSync(t *testing.T) {
 					Spec: cmapi.CertificateSpec{
 						DNSNames:   []string{"example.com"},
 						SecretName: "cert-secret-name",
-						IssuerRef: cmmeta.ObjectReference{
+						IssuerRef: cmmeta.IssuerReference{
 							Name: "issuer-name",
 							Kind: "Issuer",
 						},
@@ -1232,7 +1231,7 @@ func TestSync(t *testing.T) {
 					Spec: cmapi.CertificateSpec{
 						DNSNames:   []string{"example.com"},
 						SecretName: "cert-secret-name",
-						IssuerRef: cmmeta.ObjectReference{
+						IssuerRef: cmmeta.IssuerReference{
 							Name: "issuer-name",
 							Kind: "Issuer",
 						},
@@ -1281,7 +1280,7 @@ func TestSync(t *testing.T) {
 					Spec: cmapi.CertificateSpec{
 						DNSNames:   []string{"example.com"},
 						SecretName: "cert-secret-name",
-						IssuerRef: cmmeta.ObjectReference{
+						IssuerRef: cmmeta.IssuerReference{
 							Name: "issuer-name",
 							Kind: "Issuer",
 						},
@@ -1304,7 +1303,7 @@ func TestSync(t *testing.T) {
 					Spec: cmapi.CertificateSpec{
 						DNSNames:   []string{"example.com"},
 						SecretName: "cert-secret-name",
-						IssuerRef: cmmeta.ObjectReference{
+						IssuerRef: cmmeta.IssuerReference{
 							Name: "issuer-name",
 							Kind: "Issuer",
 						},
@@ -1355,7 +1354,7 @@ func TestSync(t *testing.T) {
 					Spec: cmapi.CertificateSpec{
 						DNSNames:   []string{"example.com"},
 						SecretName: "cert-secret-name",
-						IssuerRef: cmmeta.ObjectReference{
+						IssuerRef: cmmeta.IssuerReference{
 							Name: "issuer-name",
 							Kind: "Issuer",
 						},
@@ -1378,7 +1377,7 @@ func TestSync(t *testing.T) {
 					Spec: cmapi.CertificateSpec{
 						DNSNames:   []string{"example.com"},
 						SecretName: "cert-secret-name",
-						IssuerRef: cmmeta.ObjectReference{
+						IssuerRef: cmmeta.IssuerReference{
 							Name: "issuer-name",
 							Kind: "Issuer",
 						},
@@ -1426,7 +1425,7 @@ func TestSync(t *testing.T) {
 					Spec: cmapi.CertificateSpec{
 						DNSNames:   []string{"example.com"},
 						SecretName: "existing-crt",
-						IssuerRef: cmmeta.ObjectReference{
+						IssuerRef: cmmeta.IssuerReference{
 							Name: "issuer-name",
 							Kind: "Issuer",
 						},
@@ -1468,7 +1467,7 @@ func TestSync(t *testing.T) {
 					Spec: cmapi.CertificateSpec{
 						DNSNames:   []string{"example.com"},
 						SecretName: "existing-crt",
-						IssuerRef: cmmeta.ObjectReference{
+						IssuerRef: cmmeta.IssuerReference{
 							Name: "issuer-name",
 							Kind: "Issuer",
 						},
@@ -1501,7 +1500,7 @@ func TestSync(t *testing.T) {
 					Spec: cmapi.CertificateSpec{
 						DNSNames:   []string{"example.com"},
 						SecretName: "existing-crt",
-						IssuerRef: cmmeta.ObjectReference{
+						IssuerRef: cmmeta.IssuerReference{
 							Name: "issuer-name",
 							Kind: "Issuer",
 						},
@@ -1520,7 +1519,7 @@ func TestSync(t *testing.T) {
 					Spec: cmapi.CertificateSpec{
 						DNSNames:   []string{"example.com"},
 						SecretName: "existing-crt",
-						IssuerRef: cmmeta.ObjectReference{
+						IssuerRef: cmmeta.IssuerReference{
 							Name: "issuer-name",
 							Kind: "Issuer",
 						},
@@ -1563,7 +1562,7 @@ func TestSync(t *testing.T) {
 						DNSNames:   []string{"example.com"},
 						SecretName: "example-com-tls",
 						CommonName: "example-common-name",
-						IssuerRef: cmmeta.ObjectReference{
+						IssuerRef: cmmeta.IssuerReference{
 							Name:  "issuer-name",
 							Kind:  "Issuer",
 							Group: "cert-manager.io",
@@ -1583,7 +1582,7 @@ func TestSync(t *testing.T) {
 					Spec: cmapi.CertificateSpec{
 						DNSNames:   []string{"example.com"},
 						SecretName: "example-com-tls",
-						IssuerRef: cmmeta.ObjectReference{
+						IssuerRef: cmmeta.IssuerReference{
 							Name:  "issuer-name",
 							Kind:  "Issuer",
 							Group: "cert-manager.io",
@@ -1698,7 +1697,7 @@ func TestSync(t *testing.T) {
 						DNSNames:   []string{"example.com", "www.example.com"},
 						CommonName: "my-cn",
 						SecretName: "example-com-tls",
-						IssuerRef: cmmeta.ObjectReference{
+						IssuerRef: cmmeta.IssuerReference{
 							Name: "issuer-name",
 							Kind: "ClusterIssuer",
 						},
@@ -1753,7 +1752,7 @@ func TestSync(t *testing.T) {
 						DNSNames:   []string{"example.com", "www.example.com"},
 						CommonName: "my-cn",
 						SecretName: "example-com-tls",
-						IssuerRef: cmmeta.ObjectReference{
+						IssuerRef: cmmeta.IssuerReference{
 							Name: "issuer-name",
 							Kind: "ClusterIssuer",
 						},
@@ -1818,7 +1817,7 @@ func TestSync(t *testing.T) {
 						DNSNames:   []string{"example.com", "www.example.com"},
 						CommonName: "my-cn",
 						SecretName: "example-com-tls",
-						IssuerRef: cmmeta.ObjectReference{
+						IssuerRef: cmmeta.IssuerReference{
 							Name: "issuer-name",
 							Kind: "ClusterIssuer",
 						},
@@ -1869,7 +1868,7 @@ func TestSync(t *testing.T) {
 						DNSNames:   []string{"example.com", "www.example.com"},
 						CommonName: "my-cn",
 						SecretName: "example-com-tls",
-						IssuerRef: cmmeta.ObjectReference{
+						IssuerRef: cmmeta.IssuerReference{
 							Name: "issuer-name",
 							Kind: "ClusterIssuer",
 						},
@@ -1914,7 +1913,7 @@ func TestSync(t *testing.T) {
 						DNSNames:   []string{"example.com"},
 						SecretName: "example-com-tls",
 						CommonName: "example-common-name",
-						IssuerRef: cmmeta.ObjectReference{
+						IssuerRef: cmmeta.IssuerReference{
 							Name:  "issuer-name",
 							Kind:  "Issuer",
 							Group: "cert-manager.io",
@@ -1937,7 +1936,7 @@ func TestSync(t *testing.T) {
 					Spec: cmapi.CertificateSpec{
 						DNSNames:   []string{"example.com"},
 						SecretName: "example-com-tls",
-						IssuerRef: cmmeta.ObjectReference{
+						IssuerRef: cmmeta.IssuerReference{
 							Name:  "issuer-name",
 							Kind:  "Issuer",
 							Group: "cert-manager.io",
@@ -1986,7 +1985,7 @@ func TestSync(t *testing.T) {
 						DNSNames:   []string{"example.com"},
 						SecretName: "example-com-tls",
 						CommonName: "example-common-name",
-						IssuerRef: cmmeta.ObjectReference{
+						IssuerRef: cmmeta.IssuerReference{
 							Name:  "issuer-name",
 							Kind:  "Issuer",
 							Group: "cert-manager.io",
@@ -2009,7 +2008,7 @@ func TestSync(t *testing.T) {
 					Spec: cmapi.CertificateSpec{
 						DNSNames:   []string{"example.com"},
 						SecretName: "example-com-tls",
-						IssuerRef: cmmeta.ObjectReference{
+						IssuerRef: cmmeta.IssuerReference{
 							Name:  "issuer-name",
 							Kind:  "Issuer",
 							Group: "cert-manager.io",
@@ -2045,7 +2044,7 @@ func TestSync(t *testing.T) {
 							Hostname: ptrHostname("example.com"),
 							Port:     443,
 							Protocol: gwapi.HTTPSProtocolType,
-							TLS: &gwapi.GatewayTLSConfig{
+							TLS: &gwapi.ListenerTLSConfig{
 								Mode: ptrMode(gwapi.TLSModeTerminate),
 								CertificateRefs: []gwapi.SecretObjectReference{
 									{
@@ -2075,7 +2074,7 @@ func TestSync(t *testing.T) {
 						DNSNames:   []string{"example.com"},
 						CommonName: "my-cn",
 						SecretName: "example-com-tls",
-						IssuerRef: cmmeta.ObjectReference{
+						IssuerRef: cmmeta.IssuerReference{
 							Name: "issuer-name",
 							Kind: "ClusterIssuer",
 						},
@@ -2107,7 +2106,7 @@ func TestSync(t *testing.T) {
 							Hostname: ptrHostname("example.com"),
 							Port:     443,
 							Protocol: gwapi.TLSProtocolType,
-							TLS: &gwapi.GatewayTLSConfig{
+							TLS: &gwapi.ListenerTLSConfig{
 								Mode: ptrMode(gwapi.TLSModeTerminate),
 								CertificateRefs: []gwapi.SecretObjectReference{
 									{
@@ -2137,7 +2136,7 @@ func TestSync(t *testing.T) {
 						DNSNames:   []string{"example.com"},
 						CommonName: "my-cn",
 						SecretName: "example-com-tls",
-						IssuerRef: cmmeta.ObjectReference{
+						IssuerRef: cmmeta.IssuerReference{
 							Name: "issuer-name",
 							Kind: "ClusterIssuer",
 						},
@@ -2168,7 +2167,7 @@ func TestSync(t *testing.T) {
 						Hostname: ptrHostname("example.com"),
 						Port:     443,
 						Protocol: gwapi.HTTPSProtocolType,
-						TLS: &gwapi.GatewayTLSConfig{
+						TLS: &gwapi.ListenerTLSConfig{
 							Mode: ptrMode(gwapi.TLSModeTerminate),
 							CertificateRefs: []gwapi.SecretObjectReference{
 								{
@@ -2200,7 +2199,7 @@ func TestSync(t *testing.T) {
 					Spec: cmapi.CertificateSpec{
 						DNSNames:   []string{"example.com"},
 						SecretName: "example-com-tls",
-						IssuerRef: cmmeta.ObjectReference{
+						IssuerRef: cmmeta.IssuerReference{
 							Name: "issuer-name",
 							Kind: "ClusterIssuer",
 						},
@@ -2231,7 +2230,7 @@ func TestSync(t *testing.T) {
 						Hostname: ptrHostname("example.com"),
 						Port:     443,
 						Protocol: gwapi.HTTPSProtocolType,
-						TLS: &gwapi.GatewayTLSConfig{
+						TLS: &gwapi.ListenerTLSConfig{
 							Mode: ptrMode(gwapi.TLSModeTerminate),
 							CertificateRefs: []gwapi.SecretObjectReference{
 								{
@@ -2263,7 +2262,7 @@ func TestSync(t *testing.T) {
 					Spec: cmapi.CertificateSpec{
 						DNSNames:   []string{"example.com"},
 						SecretName: "example-com-tls",
-						IssuerRef: cmmeta.ObjectReference{
+						IssuerRef: cmmeta.IssuerReference{
 							Name: "issuer-name",
 							Kind: "ClusterIssuer",
 						},
@@ -2290,7 +2289,7 @@ func TestSync(t *testing.T) {
 						Hostname: ptrHostname("example.com"),
 						Port:     443,
 						Protocol: gwapi.HTTPSProtocolType,
-						TLS: &gwapi.GatewayTLSConfig{
+						TLS: &gwapi.ListenerTLSConfig{
 							Mode: ptrMode(gwapi.TLSModeTerminate),
 							CertificateRefs: []gwapi.SecretObjectReference{
 								{
@@ -2315,7 +2314,7 @@ func TestSync(t *testing.T) {
 					Spec: cmapi.CertificateSpec{
 						DNSNames:   []string{"example.com"},
 						SecretName: "example-com-tls",
-						IssuerRef: cmmeta.ObjectReference{
+						IssuerRef: cmmeta.IssuerReference{
 							Name: "issuer-name",
 							Kind: "ClusterIssuer",
 						},
@@ -2343,7 +2342,7 @@ func TestSync(t *testing.T) {
 						Hostname: ptrHostname("example.com"),
 						Port:     443,
 						Protocol: gwapi.HTTPSProtocolType,
-						TLS: &gwapi.GatewayTLSConfig{
+						TLS: &gwapi.ListenerTLSConfig{
 							Mode: ptrMode(gwapi.TLSModeTerminate),
 							CertificateRefs: []gwapi.SecretObjectReference{
 								{
@@ -2368,7 +2367,7 @@ func TestSync(t *testing.T) {
 					Spec: cmapi.CertificateSpec{
 						DNSNames:   []string{"example.com"},
 						SecretName: "example-com-tls",
-						IssuerRef: cmmeta.ObjectReference{
+						IssuerRef: cmmeta.IssuerReference{
 							Name: "issuer-name",
 							Kind: "ClusterIssuer",
 						},
@@ -2397,7 +2396,7 @@ func TestSync(t *testing.T) {
 						Hostname: ptrHostname("example.com"),
 						Port:     443,
 						Protocol: gwapi.HTTPSProtocolType,
-						TLS: &gwapi.GatewayTLSConfig{
+						TLS: &gwapi.ListenerTLSConfig{
 							Mode: ptrMode(gwapi.TLSModeTerminate),
 							CertificateRefs: []gwapi.SecretObjectReference{
 								{
@@ -2425,7 +2424,7 @@ func TestSync(t *testing.T) {
 					Spec: cmapi.CertificateSpec{
 						DNSNames:   []string{"example.com"},
 						SecretName: "example-com-tls",
-						IssuerRef: cmmeta.ObjectReference{
+						IssuerRef: cmmeta.IssuerReference{
 							Name: "issuer-name",
 							Kind: "ClusterIssuer",
 						},
@@ -2454,7 +2453,7 @@ func TestSync(t *testing.T) {
 						Hostname: ptrHostname("example.com"),
 						Port:     443,
 						Protocol: gwapi.HTTPSProtocolType,
-						TLS: &gwapi.GatewayTLSConfig{
+						TLS: &gwapi.ListenerTLSConfig{
 							Mode: ptrMode(gwapi.TLSModeTerminate),
 							CertificateRefs: []gwapi.SecretObjectReference{
 								{
@@ -2479,7 +2478,7 @@ func TestSync(t *testing.T) {
 					Spec: cmapi.CertificateSpec{
 						DNSNames:   []string{"example.com"},
 						SecretName: "example-com-tls",
-						IssuerRef: cmmeta.ObjectReference{
+						IssuerRef: cmmeta.IssuerReference{
 							Name: "issuer-name",
 							Kind: "ClusterIssuer",
 						},
@@ -2506,7 +2505,7 @@ func TestSync(t *testing.T) {
 						Hostname: ptrHostname("example.com"),
 						Port:     443,
 						Protocol: gwapi.HTTPSProtocolType,
-						TLS: &gwapi.GatewayTLSConfig{
+						TLS: &gwapi.ListenerTLSConfig{
 							Mode: ptrMode(gwapi.TLSModeTerminate),
 							CertificateRefs: []gwapi.SecretObjectReference{
 								{
@@ -2531,7 +2530,7 @@ func TestSync(t *testing.T) {
 					Spec: cmapi.CertificateSpec{
 						DNSNames:   []string{"example.com"},
 						SecretName: "example-com-tls",
-						IssuerRef: cmmeta.ObjectReference{
+						IssuerRef: cmmeta.IssuerReference{
 							Name: "issuer-name",
 							Kind: "ClusterIssuer",
 						},
@@ -2562,7 +2561,7 @@ func TestSync(t *testing.T) {
 						Hostname: ptrHostname("example.com"),
 						Port:     443,
 						Protocol: gwapi.HTTPSProtocolType,
-						TLS: &gwapi.GatewayTLSConfig{
+						TLS: &gwapi.ListenerTLSConfig{
 							Mode: ptrMode(gwapi.TLSModeTerminate),
 							CertificateRefs: []gwapi.SecretObjectReference{
 								{
@@ -2599,7 +2598,7 @@ func TestSync(t *testing.T) {
 						Hostname: ptrHostname("example.com"),
 						Port:     443,
 						Protocol: gwapi.HTTPSProtocolType,
-						TLS: &gwapi.GatewayTLSConfig{
+						TLS: &gwapi.ListenerTLSConfig{
 							Mode: ptrMode(gwapi.TLSModeTerminate),
 							CertificateRefs: []gwapi.SecretObjectReference{
 								{
@@ -2613,7 +2612,7 @@ func TestSync(t *testing.T) {
 						Hostname: nil, // 🔥
 						Port:     443,
 						Protocol: gwapi.HTTPSProtocolType,
-						TLS: &gwapi.GatewayTLSConfig{
+						TLS: &gwapi.ListenerTLSConfig{
 							Mode: ptrMode(gwapi.TLSModeTerminate),
 							CertificateRefs: []gwapi.SecretObjectReference{
 								{
@@ -2637,7 +2636,7 @@ func TestSync(t *testing.T) {
 						DNSNames:   []string{"example.com"},
 						SecretName: "example-com-tls",
 						Usages:     cmapi.DefaultKeyUsages(),
-						IssuerRef: cmmeta.ObjectReference{
+						IssuerRef: cmmeta.IssuerReference{
 							Name: "issuer-name",
 							Kind: "Issuer",
 						},
@@ -2668,7 +2667,7 @@ func TestSync(t *testing.T) {
 						Hostname: ptrHostname("example.com"),
 						Port:     443,
 						Protocol: gwapi.HTTPSProtocolType,
-						TLS: &gwapi.GatewayTLSConfig{
+						TLS: &gwapi.ListenerTLSConfig{
 							Mode:            ptrMode(gwapi.TLSModeTerminate),
 							CertificateRefs: []gwapi.SecretObjectReference{},
 						},
@@ -2676,7 +2675,7 @@ func TestSync(t *testing.T) {
 						Hostname: ptrHostname("www.example.com"),
 						Port:     443,
 						Protocol: gwapi.HTTPSProtocolType,
-						TLS: &gwapi.GatewayTLSConfig{
+						TLS: &gwapi.ListenerTLSConfig{
 							Mode: ptrMode(gwapi.TLSModeTerminate),
 							CertificateRefs: []gwapi.SecretObjectReference{
 								{
@@ -2700,7 +2699,7 @@ func TestSync(t *testing.T) {
 						DNSNames:   []string{"www.example.com"},
 						SecretName: "example-com-tls",
 						Usages:     cmapi.DefaultKeyUsages(),
-						IssuerRef: cmmeta.ObjectReference{
+						IssuerRef: cmmeta.IssuerReference{
 							Name: "issuer-name",
 							Kind: "Issuer",
 						},
@@ -2730,7 +2729,7 @@ func TestSync(t *testing.T) {
 						Hostname: ptrHostname("example.com"),
 						Port:     443,
 						Protocol: gwapi.HTTPSProtocolType,
-						TLS: &gwapi.GatewayTLSConfig{
+						TLS: &gwapi.ListenerTLSConfig{
 							Mode: ptrMode(gwapi.TLSModeTerminate),
 							CertificateRefs: []gwapi.SecretObjectReference{
 								{
@@ -2744,7 +2743,7 @@ func TestSync(t *testing.T) {
 						Hostname: ptrHostname("subdomain.example.com"),
 						Port:     443,
 						Protocol: gwapi.TLSProtocolType,
-						TLS: &gwapi.GatewayTLSConfig{
+						TLS: &gwapi.ListenerTLSConfig{
 							Mode:            ptrMode(gwapi.TLSModePassthrough),
 							CertificateRefs: []gwapi.SecretObjectReference{},
 						},
@@ -2762,7 +2761,7 @@ func TestSync(t *testing.T) {
 						DNSNames:   []string{"example.com"},
 						SecretName: "example-com-tls",
 						Usages:     cmapi.DefaultKeyUsages(),
-						IssuerRef: cmmeta.ObjectReference{
+						IssuerRef: cmmeta.IssuerReference{
 							Name: "issuer-name",
 							Kind: "Issuer",
 						},
@@ -2802,7 +2801,7 @@ func TestSync(t *testing.T) {
 						Hostname: ptrHostname("example.com"),
 						Port:     443,
 						Protocol: gwapi.HTTPSProtocolType,
-						TLS: &gwapi.GatewayTLSConfig{
+						TLS: &gwapi.ListenerTLSConfig{
 							Mode: ptrMode(gwapi.TLSModeTerminate),
 							CertificateRefs: []gwapi.SecretObjectReference{
 								{
@@ -2827,7 +2826,7 @@ func TestSync(t *testing.T) {
 					Spec: cmapi.CertificateSpec{
 						DNSNames:   []string{"example.com"},
 						SecretName: "existing-crt",
-						IssuerRef: cmmeta.ObjectReference{
+						IssuerRef: cmmeta.IssuerReference{
 							Name:  "issuer-name",
 							Kind:  "Issuer",
 							Group: "cert-manager.io",
@@ -2856,7 +2855,7 @@ func TestSync(t *testing.T) {
 						Hostname: ptrHostname("example.com"),
 						Port:     443,
 						Protocol: gwapi.HTTPSProtocolType,
-						TLS: &gwapi.GatewayTLSConfig{
+						TLS: &gwapi.ListenerTLSConfig{
 							Mode: ptrMode(gwapi.TLSModeTerminate),
 							CertificateRefs: []gwapi.SecretObjectReference{
 								{
@@ -2887,7 +2886,7 @@ func TestSync(t *testing.T) {
 					Spec: cmapi.CertificateSpec{
 						DNSNames:   []string{"example.com"},
 						SecretName: "existing-crt",
-						IssuerRef: cmmeta.ObjectReference{
+						IssuerRef: cmmeta.IssuerReference{
 							Name: "issuer-name",
 							Kind: "Issuer",
 						},
@@ -2918,7 +2917,7 @@ func TestSync(t *testing.T) {
 						Hostname: ptrHostname("example.com"),
 						Port:     443,
 						Protocol: gwapi.HTTPSProtocolType,
-						TLS: &gwapi.GatewayTLSConfig{
+						TLS: &gwapi.ListenerTLSConfig{
 							Mode: ptrMode(gwapi.TLSModeTerminate),
 							CertificateRefs: []gwapi.SecretObjectReference{
 								{
@@ -2945,7 +2944,7 @@ func TestSync(t *testing.T) {
 					Spec: cmapi.CertificateSpec{
 						DNSNames:   []string{"example.com"},
 						SecretName: "cert-secret-name",
-						IssuerRef: cmmeta.ObjectReference{
+						IssuerRef: cmmeta.IssuerReference{
 							Name: "issuer-name",
 							Kind: "Issuer",
 						},
@@ -2967,7 +2966,7 @@ func TestSync(t *testing.T) {
 					Spec: cmapi.CertificateSpec{
 						DNSNames:   []string{"example.com"},
 						SecretName: "cert-secret-name",
-						IssuerRef: cmmeta.ObjectReference{
+						IssuerRef: cmmeta.IssuerReference{
 							Name: "issuer-name",
 							Kind: "Issuer",
 						},
@@ -2996,7 +2995,7 @@ func TestSync(t *testing.T) {
 						Hostname: ptrHostname("example.com"),
 						Port:     443,
 						Protocol: gwapi.HTTPSProtocolType,
-						TLS: &gwapi.GatewayTLSConfig{
+						TLS: &gwapi.ListenerTLSConfig{
 							Mode: ptrMode(gwapi.TLSModeTerminate),
 							CertificateRefs: []gwapi.SecretObjectReference{
 								{
@@ -3019,7 +3018,7 @@ func TestSync(t *testing.T) {
 					Spec: cmapi.CertificateSpec{
 						DNSNames:   []string{"example.com"},
 						SecretName: "existing-crt",
-						IssuerRef: cmmeta.ObjectReference{
+						IssuerRef: cmmeta.IssuerReference{
 							Name: "issuer-name",
 							Kind: "Issuer",
 						},
@@ -3048,7 +3047,7 @@ func TestSync(t *testing.T) {
 						Hostname: ptrHostname("example.com"),
 						Port:     443,
 						Protocol: gwapi.HTTPSProtocolType,
-						TLS: &gwapi.GatewayTLSConfig{
+						TLS: &gwapi.ListenerTLSConfig{
 							Mode: ptrMode(gwapi.TLSModeTerminate),
 							CertificateRefs: []gwapi.SecretObjectReference{
 								{
@@ -3071,7 +3070,7 @@ func TestSync(t *testing.T) {
 					Spec: cmapi.CertificateSpec{
 						DNSNames:   []string{"example.com"},
 						SecretName: "existing-crt",
-						IssuerRef: cmmeta.ObjectReference{
+						IssuerRef: cmmeta.IssuerReference{
 							Name: "issuer-name",
 							Kind: "Issuer",
 						},
@@ -3104,7 +3103,7 @@ func TestSync(t *testing.T) {
 					Spec: cmapi.CertificateSpec{
 						DNSNames:   []string{"example.com"},
 						SecretName: "existing-crt",
-						IssuerRef: cmmeta.ObjectReference{
+						IssuerRef: cmmeta.IssuerReference{
 							Name: "issuer-name",
 							Kind: "Issuer",
 						},
@@ -3123,7 +3122,7 @@ func TestSync(t *testing.T) {
 					Spec: cmapi.CertificateSpec{
 						DNSNames:   []string{"example.com"},
 						SecretName: "existing-crt",
-						IssuerRef: cmmeta.ObjectReference{
+						IssuerRef: cmmeta.IssuerReference{
 							Name: "issuer-name",
 							Kind: "Issuer",
 						},
@@ -3152,7 +3151,7 @@ func TestSync(t *testing.T) {
 						Hostname: ptrHostname("example.com"),
 						Port:     443,
 						Protocol: gwapi.HTTPSProtocolType,
-						TLS: &gwapi.GatewayTLSConfig{
+						TLS: &gwapi.ListenerTLSConfig{
 							Mode: ptrMode(gwapi.TLSModeTerminate),
 							CertificateRefs: []gwapi.SecretObjectReference{
 								{
@@ -3176,7 +3175,7 @@ func TestSync(t *testing.T) {
 						DNSNames:   []string{"example.com"},
 						SecretName: "example-com-tls",
 						CommonName: "example-common-name",
-						IssuerRef: cmmeta.ObjectReference{
+						IssuerRef: cmmeta.IssuerReference{
 							Name:  "issuer-name",
 							Kind:  "Issuer",
 							Group: "cert-manager.io",
@@ -3196,7 +3195,7 @@ func TestSync(t *testing.T) {
 					Spec: cmapi.CertificateSpec{
 						DNSNames:   []string{"example.com"},
 						SecretName: "example-com-tls",
-						IssuerRef: cmmeta.ObjectReference{
+						IssuerRef: cmmeta.IssuerReference{
 							Name:  "issuer-name",
 							Kind:  "Issuer",
 							Group: "cert-manager.io",
@@ -3227,7 +3226,7 @@ func TestSync(t *testing.T) {
 						Hostname: ptrHostname("example.com"),
 						Port:     443,
 						Protocol: gwapi.HTTPSProtocolType,
-						TLS: &gwapi.GatewayTLSConfig{
+						TLS: &gwapi.ListenerTLSConfig{
 							Mode: ptrMode(gwapi.TLSModeTerminate),
 							CertificateRefs: []gwapi.SecretObjectReference{
 								{
@@ -3241,7 +3240,7 @@ func TestSync(t *testing.T) {
 						Hostname: ptrHostname("www.example.com"),
 						Port:     443,
 						Protocol: gwapi.HTTPSProtocolType,
-						TLS: &gwapi.GatewayTLSConfig{
+						TLS: &gwapi.ListenerTLSConfig{
 							Mode: ptrMode(gwapi.TLSModeTerminate),
 							CertificateRefs: []gwapi.SecretObjectReference{
 								{
@@ -3255,7 +3254,7 @@ func TestSync(t *testing.T) {
 						Hostname: ptrHostname("foo.example.com"),
 						Port:     443,
 						Protocol: gwapi.HTTPSProtocolType,
-						TLS: &gwapi.GatewayTLSConfig{
+						TLS: &gwapi.ListenerTLSConfig{
 							Mode: ptrMode(gwapi.TLSModeTerminate),
 							CertificateRefs: []gwapi.SecretObjectReference{
 								{
@@ -3281,7 +3280,7 @@ func TestSync(t *testing.T) {
 					Spec: cmapi.CertificateSpec{
 						DNSNames:   []string{"example.com", "www.example.com", "foo.example.com"},
 						SecretName: "example-com-tls",
-						IssuerRef: cmmeta.ObjectReference{
+						IssuerRef: cmmeta.IssuerReference{
 							Name:  "issuer-name",
 							Kind:  "Issuer",
 							Group: "cert-manager.io",
@@ -3312,7 +3311,7 @@ func TestSync(t *testing.T) {
 						Hostname: ptrHostname("foo.example.com"),
 						Port:     443,
 						Protocol: gwapi.HTTPSProtocolType,
-						TLS: &gwapi.GatewayTLSConfig{
+						TLS: &gwapi.ListenerTLSConfig{
 							Mode: ptrMode(gwapi.TLSModeTerminate),
 							CertificateRefs: []gwapi.SecretObjectReference{
 								{
@@ -3326,7 +3325,7 @@ func TestSync(t *testing.T) {
 						Hostname: ptrHostname("bar.example.com"),
 						Port:     443,
 						Protocol: gwapi.HTTPSProtocolType,
-						TLS: &gwapi.GatewayTLSConfig{
+						TLS: &gwapi.ListenerTLSConfig{
 							Mode: ptrMode(gwapi.TLSModeTerminate),
 							CertificateRefs: []gwapi.SecretObjectReference{
 								{
@@ -3353,7 +3352,7 @@ func TestSync(t *testing.T) {
 					Spec: cmapi.CertificateSpec{
 						DNSNames:   []string{"foo.example.com"},
 						SecretName: "foo-example-com-tls",
-						IssuerRef: cmmeta.ObjectReference{
+						IssuerRef: cmmeta.IssuerReference{
 							Name:  "issuer-name",
 							Kind:  "Issuer",
 							Group: "cert-manager.io",
@@ -3370,7 +3369,7 @@ func TestSync(t *testing.T) {
 					Spec: cmapi.CertificateSpec{
 						DNSNames:   []string{"bar.example.com"},
 						SecretName: "bar-example-com-tls",
-						IssuerRef: cmmeta.ObjectReference{
+						IssuerRef: cmmeta.IssuerReference{
 							Name:  "issuer-name",
 							Kind:  "Issuer",
 							Group: "cert-manager.io",
@@ -3401,7 +3400,7 @@ func TestSync(t *testing.T) {
 						Hostname: ptrHostname("example.com"),
 						Port:     443,
 						Protocol: gwapi.HTTPSProtocolType,
-						TLS: &gwapi.GatewayTLSConfig{
+						TLS: &gwapi.ListenerTLSConfig{
 							Mode: ptrMode(gwapi.TLSModeTerminate),
 							CertificateRefs: []gwapi.SecretObjectReference{
 								{
@@ -3439,7 +3438,7 @@ func TestSync(t *testing.T) {
 						Hostname: ptrHostname("example.com"),
 						Port:     443,
 						Protocol: gwapi.HTTPSProtocolType,
-						TLS: &gwapi.GatewayTLSConfig{
+						TLS: &gwapi.ListenerTLSConfig{
 							Mode: ptrMode(gwapi.TLSModeTerminate),
 							CertificateRefs: []gwapi.SecretObjectReference{
 								{
@@ -3468,7 +3467,7 @@ func TestSync(t *testing.T) {
 						DNSNames:   []string{"example.com"},
 						CommonName: "my-cn",
 						SecretName: "example-com-tls",
-						IssuerRef: cmmeta.ObjectReference{
+						IssuerRef: cmmeta.IssuerReference{
 							Name: "issuer-name",
 							Kind: "ClusterIssuer",
 						},
@@ -3514,7 +3513,7 @@ func TestSync(t *testing.T) {
 							Hostname: ptrHostname("example.com"),
 							Port:     443,
 							Protocol: gwapi.HTTPSProtocolType,
-							TLS: &gwapi.GatewayTLSConfig{
+							TLS: &gwapi.ListenerTLSConfig{
 								Mode: ptrMode(gwapi.TLSModeTerminate),
 								CertificateRefs: []gwapi.SecretObjectReference{
 									{
@@ -3545,7 +3544,7 @@ func TestSync(t *testing.T) {
 						DNSNames:   []string{"example.com"},
 						CommonName: "my-cn",
 						SecretName: "example-com-tls",
-						IssuerRef: cmmeta.ObjectReference{
+						IssuerRef: cmmeta.IssuerReference{
 							Name: "issuer-name",
 							Kind: "ClusterIssuer",
 						},
@@ -3577,7 +3576,7 @@ func TestSync(t *testing.T) {
 							Hostname: ptrHostname("example.com"),
 							Port:     443,
 							Protocol: gwapi.HTTPSProtocolType,
-							TLS: &gwapi.GatewayTLSConfig{
+							TLS: &gwapi.ListenerTLSConfig{
 								Mode: ptrMode(gwapi.TLSModeTerminate),
 								CertificateRefs: []gwapi.SecretObjectReference{
 									{
@@ -3608,7 +3607,7 @@ func TestSync(t *testing.T) {
 						DNSNames:   []string{"example.com"},
 						CommonName: "my-cn",
 						SecretName: "example-com-tls",
-						IssuerRef: cmmeta.ObjectReference{
+						IssuerRef: cmmeta.IssuerReference{
 							Name: "issuer-name",
 							Kind: "ClusterIssuer",
 						},
@@ -3678,7 +3677,7 @@ func TestSync(t *testing.T) {
 			}, "cert-manager-test")
 			b.Start()
 
-			err := sync(context.Background(), test.IngressLike)
+			err := sync(t.Context(), test.IngressLike)
 
 			// If test.Err == true, err should not be nil and vice versa
 			if test.Err == (err == nil) {
@@ -3913,7 +3912,7 @@ func Test_validateGatewayListenerBlock(t *testing.T) {
 				Hostname: ptrHostname(""),
 				Port:     gwapi.PortNumber(443),
 				Protocol: gwapi.HTTPSProtocolType,
-				TLS: &gwapi.GatewayTLSConfig{
+				TLS: &gwapi.ListenerTLSConfig{
 					Mode: ptrMode(gwapi.TLSModeTerminate),
 					CertificateRefs: []gwapi.SecretObjectReference{
 						{
@@ -3938,7 +3937,7 @@ func Test_validateGatewayListenerBlock(t *testing.T) {
 				Hostname: ptrHostname("example.com"),
 				Port:     gwapi.PortNumber(443),
 				Protocol: gwapi.HTTPSProtocolType,
-				TLS: &gwapi.GatewayTLSConfig{
+				TLS: &gwapi.ListenerTLSConfig{
 					Mode: ptrMode(gwapi.TLSModeTerminate),
 					CertificateRefs: []gwapi.SecretObjectReference{
 						{
@@ -3958,7 +3957,7 @@ func Test_validateGatewayListenerBlock(t *testing.T) {
 				Hostname: ptrHostname("example.com"),
 				Port:     gwapi.PortNumber(443),
 				Protocol: gwapi.HTTPSProtocolType,
-				TLS: &gwapi.GatewayTLSConfig{
+				TLS: &gwapi.ListenerTLSConfig{
 					Mode: ptrMode(gwapi.TLSModeTerminate),
 					CertificateRefs: []gwapi.SecretObjectReference{
 						{
@@ -3977,7 +3976,7 @@ func Test_validateGatewayListenerBlock(t *testing.T) {
 				Hostname: ptrHostname("example.com"),
 				Port:     gwapi.PortNumber(443),
 				Protocol: gwapi.HTTPSProtocolType,
-				TLS: &gwapi.GatewayTLSConfig{
+				TLS: &gwapi.ListenerTLSConfig{
 					Mode: ptrMode(gwapi.TLSModeTerminate),
 					CertificateRefs: []gwapi.SecretObjectReference{
 						{
@@ -4002,7 +4001,7 @@ func Test_validateGatewayListenerBlock(t *testing.T) {
 				Hostname: ptrHostname("example.com"),
 				Port:     gwapi.PortNumber(443),
 				Protocol: gwapi.HTTPSProtocolType,
-				TLS: &gwapi.GatewayTLSConfig{
+				TLS: &gwapi.ListenerTLSConfig{
 					Mode: ptrMode(gwapi.TLSModeTerminate),
 					CertificateRefs: []gwapi.SecretObjectReference{
 						{
@@ -4028,7 +4027,7 @@ func Test_validateGatewayListenerBlock(t *testing.T) {
 				Hostname: ptrHostname("example.com"),
 				Port:     gwapi.PortNumber(443),
 				Protocol: gwapi.HTTPSProtocolType,
-				TLS: &gwapi.GatewayTLSConfig{
+				TLS: &gwapi.ListenerTLSConfig{
 					Mode: ptrMode(gwapi.TLSModeTerminate),
 					CertificateRefs: []gwapi.SecretObjectReference{
 						{
@@ -4126,7 +4125,7 @@ func Test_findCertificatesToBeRemoved(t *testing.T) {
 			ingLike: &gwapi.Gateway{
 				ObjectMeta: metav1.ObjectMeta{Name: "gw-2", Namespace: gen.DefaultTestNamespace, UID: "gw-2"},
 				Spec: gwapi.GatewaySpec{Listeners: []gwapi.Listener{{
-					TLS: &gwapi.GatewayTLSConfig{CertificateRefs: []gwapi.SecretObjectReference{
+					TLS: &gwapi.ListenerTLSConfig{CertificateRefs: []gwapi.SecretObjectReference{
 						{
 							Name: "secret-name",
 						},
@@ -4149,7 +4148,7 @@ func Test_findCertificatesToBeRemoved(t *testing.T) {
 			ingLike: &gwapi.Gateway{
 				ObjectMeta: metav1.ObjectMeta{Name: "gw-1", Namespace: gen.DefaultTestNamespace, UID: "gw-1"},
 				Spec: gwapi.GatewaySpec{Listeners: []gwapi.Listener{
-					{TLS: &gwapi.GatewayTLSConfig{CertificateRefs: []gwapi.SecretObjectReference{{Name: "not-secret-name"}}}},
+					{TLS: &gwapi.ListenerTLSConfig{CertificateRefs: []gwapi.SecretObjectReference{{Name: "not-secret-name"}}}},
 				}},
 			},
 			wantToBeRemoved: []string{"cert-1"},
@@ -4168,7 +4167,7 @@ func Test_findCertificatesToBeRemoved(t *testing.T) {
 			ingLike: &gwapi.Gateway{
 				ObjectMeta: metav1.ObjectMeta{Name: "gw-1", Namespace: gen.DefaultTestNamespace, UID: "gw-1"},
 				Spec: gwapi.GatewaySpec{Listeners: []gwapi.Listener{
-					{TLS: &gwapi.GatewayTLSConfig{CertificateRefs: []gwapi.SecretObjectReference{{Name: "secret-name"}}}},
+					{TLS: &gwapi.ListenerTLSConfig{CertificateRefs: []gwapi.SecretObjectReference{{Name: "secret-name"}}}},
 				}},
 			},
 			wantToBeRemoved: nil,
@@ -4187,8 +4186,8 @@ func Test_secretNameUsedIn_nilPointerGateway(t *testing.T) {
 		ObjectMeta: metav1.ObjectMeta{Name: "gw-1", Namespace: gen.DefaultTestNamespace, UID: "gw-1"},
 		Spec: gwapi.GatewaySpec{Listeners: []gwapi.Listener{
 			{TLS: nil},
-			{TLS: &gwapi.GatewayTLSConfig{CertificateRefs: nil}},
-			{TLS: &gwapi.GatewayTLSConfig{CertificateRefs: []gwapi.SecretObjectReference{{Name: "secret-name"}}}},
+			{TLS: &gwapi.ListenerTLSConfig{CertificateRefs: nil}},
+			{TLS: &gwapi.ListenerTLSConfig{CertificateRefs: []gwapi.SecretObjectReference{{Name: "secret-name"}}}},
 		}},
 	})
 	assert.Equal(t, true, got)
@@ -4197,7 +4196,7 @@ func Test_secretNameUsedIn_nilPointerGateway(t *testing.T) {
 		ObjectMeta: metav1.ObjectMeta{Name: "gw-1", Namespace: gen.DefaultTestNamespace, UID: "gw-1"},
 		Spec: gwapi.GatewaySpec{Listeners: []gwapi.Listener{
 			{TLS: nil},
-			{TLS: &gwapi.GatewayTLSConfig{CertificateRefs: nil}},
+			{TLS: &gwapi.ListenerTLSConfig{CertificateRefs: nil}},
 		}},
 	})
 	assert.Equal(t, false, got)

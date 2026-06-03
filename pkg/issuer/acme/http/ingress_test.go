@@ -17,7 +17,6 @@ limitations under the License.
 package http
 
 import (
-	"context"
 	"fmt"
 	"reflect"
 	"testing"
@@ -54,7 +53,7 @@ func TestGetIngressesForChallenge(t *testing.T) {
 				},
 			},
 			PreFn: func(t *testing.T, s *solverFixture) {
-				ing, err := s.Solver.createIngress(context.TODO(), s.Challenge, "fakeservice")
+				ing, err := s.Solver.createIngress(t.Context(), s.Challenge, "fakeservice")
 				if err != nil {
 					t.Errorf("error preparing test: %v", err)
 				}
@@ -161,7 +160,7 @@ func TestGetIngressesForChallenge(t *testing.T) {
 				},
 			},
 			PreFn: func(t *testing.T, s *solverFixture) {
-				ing, err := s.Solver.createIngress(context.TODO(), s.Challenge, "fakeservice")
+				ing, err := s.Solver.createIngress(t.Context(), s.Challenge, "fakeservice")
 				if err != nil {
 					t.Errorf("error preparing test: %v", err)
 				}
@@ -196,7 +195,7 @@ func TestGetIngressesForChallenge(t *testing.T) {
 			PreFn: func(t *testing.T, s *solverFixture) {
 				differentChallenge := s.Challenge.DeepCopy()
 				differentChallenge.Spec.DNSName = "notexample.com"
-				_, err := s.Solver.createIngress(context.TODO(), differentChallenge, "fakeservice")
+				_, err := s.Solver.createIngress(t.Context(), differentChallenge, "fakeservice")
 				if err != nil {
 					t.Errorf("error preparing test: %v", err)
 				}
@@ -216,7 +215,7 @@ func TestGetIngressesForChallenge(t *testing.T) {
 	for name, test := range tests {
 		t.Run(name, func(t *testing.T) {
 			test.Setup(t)
-			resp, err := test.Solver.getIngressesForChallenge(context.TODO(), test.Challenge)
+			resp, err := test.Solver.getIngressesForChallenge(t.Context(), test.Challenge)
 			if err != nil && !test.Err {
 				t.Errorf("Expected function to not error, but got: %v", err)
 			}
@@ -246,7 +245,7 @@ func TestCleanupIngresses(t *testing.T) {
 				},
 			},
 			PreFn: func(t *testing.T, s *solverFixture) {
-				ing, err := s.Solver.createIngress(context.TODO(), s.Challenge, "fakeservice")
+				ing, err := s.Solver.createIngress(t.Context(), s.Challenge, "fakeservice")
 				if err != nil {
 					t.Errorf("error preparing test: %v", err)
 				}
@@ -255,7 +254,7 @@ func TestCleanupIngresses(t *testing.T) {
 			},
 			CheckFn: func(t *testing.T, s *solverFixture, args ...interface{}) {
 				createdIngress := s.testResources[createdIngressKey].(*networkingv1.Ingress)
-				ing, err := s.Builder.FakeKubeClient().NetworkingV1().Ingresses(s.Challenge.Namespace).Get(context.TODO(), createdIngress.Name, metav1.GetOptions{})
+				ing, err := s.Builder.FakeKubeClient().NetworkingV1().Ingresses(s.Challenge.Namespace).Get(t.Context(), createdIngress.Name, metav1.GetOptions{})
 				if err != nil && !apierrors.IsNotFound(err) {
 					t.Errorf("error when getting test ingress, expected 'not found' but got: %v", err)
 				}
@@ -281,7 +280,7 @@ func TestCleanupIngresses(t *testing.T) {
 			PreFn: func(t *testing.T, s *solverFixture) {
 				differentChallenge := s.Challenge.DeepCopy()
 				differentChallenge.Spec.DNSName = "notexample.com"
-				ing, err := s.Solver.createIngress(context.TODO(), differentChallenge, "fakeservice")
+				ing, err := s.Solver.createIngress(t.Context(), differentChallenge, "fakeservice")
 				if err != nil {
 					t.Errorf("error preparing test: %v", err)
 				}
@@ -289,7 +288,7 @@ func TestCleanupIngresses(t *testing.T) {
 			},
 			CheckFn: func(t *testing.T, s *solverFixture, args ...interface{}) {
 				createdIngress := s.testResources[createdIngressKey].(*networkingv1.Ingress)
-				_, err := s.Builder.FakeKubeClient().NetworkingV1().Ingresses(s.Challenge.Namespace).Get(context.TODO(), createdIngress.Name, metav1.GetOptions{})
+				_, err := s.Builder.FakeKubeClient().NetworkingV1().Ingresses(s.Challenge.Namespace).Get(t.Context(), createdIngress.Name, metav1.GetOptions{})
 				if apierrors.IsNotFound(err) {
 					t.Errorf("expected ingress resource %q to not be deleted, but it was deleted", createdIngress.Name)
 				}
@@ -364,7 +363,7 @@ func TestCleanupIngresses(t *testing.T) {
 				expectedIng := s.KubeObjects[0].(*networkingv1.Ingress).DeepCopy()
 				expectedIng.Spec.Rules = nil
 
-				actualIng, err := s.Builder.FakeKubeClient().NetworkingV1().Ingresses(s.Challenge.Namespace).Get(context.TODO(), expectedIng.Name, metav1.GetOptions{})
+				actualIng, err := s.Builder.FakeKubeClient().NetworkingV1().Ingresses(s.Challenge.Namespace).Get(t.Context(), expectedIng.Name, metav1.GetOptions{})
 				if apierrors.IsNotFound(err) {
 					t.Errorf("expected ingress resource %q to not be deleted, but it was deleted", expectedIng.Name)
 				}
@@ -463,13 +462,15 @@ func TestCleanupIngresses(t *testing.T) {
 				expectedIng := s.KubeObjects[0].(*networkingv1.Ingress).DeepCopy()
 				expectedIng.Spec.Rules = []networkingv1.IngressRule{expectedIng.Spec.Rules[1]}
 
-				actualIng, err := s.Builder.FakeKubeClient().NetworkingV1().Ingresses(s.Challenge.Namespace).Get(context.TODO(), expectedIng.Name, metav1.GetOptions{})
+				actualIng, err := s.Builder.FakeKubeClient().NetworkingV1().Ingresses(s.Challenge.Namespace).Get(t.Context(), expectedIng.Name, metav1.GetOptions{})
 				if apierrors.IsNotFound(err) {
 					t.Errorf("expected ingress resource %q to not be deleted, but it was deleted", expectedIng.Name)
 				}
 				if err != nil {
 					t.Errorf("error getting ingress resource: %v", err)
 				}
+
+				expectedIng.ManagedFields = actualIng.ManagedFields
 
 				if diff := cmp.Diff(expectedIng, actualIng); diff != "" {
 					t.Errorf("expected did not match actual (-want +got):\n%s", diff)
@@ -495,7 +496,7 @@ func TestCleanupIngresses(t *testing.T) {
 				s.Builder.FakeKubeClient().PrependReactor("delete", "ingresses", func(action coretesting.Action) (handled bool, ret runtime.Object, err error) {
 					return true, nil, fmt.Errorf("simulated error")
 				})
-				ing, err := s.Solver.createIngress(context.TODO(), s.Challenge, "fakeservice")
+				ing, err := s.Solver.createIngress(t.Context(), s.Challenge, "fakeservice")
 				if err != nil {
 					t.Errorf("error preparing test: %v", err)
 				}
@@ -507,7 +508,7 @@ func TestCleanupIngresses(t *testing.T) {
 	for name, test := range tests {
 		t.Run(name, func(t *testing.T) {
 			test.Setup(t)
-			err := test.Solver.cleanupIngresses(context.TODO(), test.Challenge)
+			err := test.Solver.cleanupIngresses(t.Context(), test.Challenge)
 			if err != nil && !test.Err {
 				t.Errorf("Expected function to not error, but got: %v", err)
 			}
@@ -534,7 +535,7 @@ func TestEnsureIngress(t *testing.T) {
 			},
 			Err: true,
 			PreFn: func(t *testing.T, s *solverFixture) {
-				_, err := s.Solver.createIngress(context.TODO(), s.Challenge, "anotherfakeservice")
+				_, err := s.Solver.createIngress(t.Context(), s.Challenge, "anotherfakeservice")
 				if err != nil {
 					t.Errorf("error preparing test: %v", err)
 				}
@@ -578,7 +579,7 @@ func TestEnsureIngress(t *testing.T) {
 	for name, test := range tests {
 		t.Run(name, func(t *testing.T) {
 			test.Setup(t)
-			resp, err := test.Solver.ensureIngress(context.TODO(), test.Challenge, "fakeservice")
+			resp, err := test.Solver.ensureIngress(t.Context(), test.Challenge, "fakeservice")
 			if err != nil && !test.Err {
 				t.Errorf("Expected function to not error, but got: %v", err)
 			}
@@ -658,11 +659,14 @@ func TestMergeIngressObjectMetaWithIngressResourceTemplate(t *testing.T) {
 					return
 				}
 
+				expectedIngress.APIVersion = resp.APIVersion
+				expectedIngress.Kind = resp.Kind
 				expectedIngress.OwnerReferences = resp.OwnerReferences
+				expectedIngress.ManagedFields = resp.ManagedFields
 				expectedIngress.Name = resp.Name
 
-				if !reflect.DeepEqual(resp, expectedIngress) {
-					t.Errorf("unexpected ingress generated from merge\nexp=%+v\ngot=%+v", expectedIngress, resp)
+				if diff := cmp.Diff(expectedIngress, resp); diff != "" {
+					t.Errorf("unexpected ingress generated from merge (-want +got):\n%s", diff)
 				}
 			},
 		},
@@ -671,7 +675,7 @@ func TestMergeIngressObjectMetaWithIngressResourceTemplate(t *testing.T) {
 	for name, test := range tests {
 		t.Run(name, func(t *testing.T) {
 			test.Setup(t)
-			resp, err := test.Solver.createIngress(context.TODO(), test.Challenge, "fakeservice")
+			resp, err := test.Solver.createIngress(t.Context(), test.Challenge, "fakeservice")
 			test.Finish(t, resp, err)
 		})
 	}
@@ -736,11 +740,14 @@ func TestOverrideNginxIngressWhitelistAnnotation(t *testing.T) {
 					return
 				}
 
+				expectedIngress.APIVersion = resp.APIVersion
+				expectedIngress.Kind = resp.Kind
 				expectedIngress.OwnerReferences = resp.OwnerReferences
+				expectedIngress.ManagedFields = resp.ManagedFields
 				expectedIngress.Name = resp.Name
 
-				if !reflect.DeepEqual(resp, expectedIngress) {
-					t.Errorf("unexpected ingress generated from merge\nexp=%+v\ngot=%+v", expectedIngress, resp)
+				if diff := cmp.Diff(expectedIngress, resp); diff != "" {
+					t.Errorf("unexpected ingress generated from merge (-want +got):\n%s", diff)
 				}
 			},
 		},
@@ -749,7 +756,7 @@ func TestOverrideNginxIngressWhitelistAnnotation(t *testing.T) {
 	for name, test := range tests {
 		t.Run(name, func(t *testing.T) {
 			test.Setup(t)
-			resp, err := test.Solver.createIngress(context.TODO(), test.Challenge, "fakeservice")
+			resp, err := test.Solver.createIngress(t.Context(), test.Challenge, "fakeservice")
 			test.Finish(t, resp, err)
 		})
 	}

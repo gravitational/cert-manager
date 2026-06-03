@@ -20,6 +20,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"maps"
 	"net"
 	"reflect"
 	"strconv"
@@ -409,7 +410,7 @@ func buildCertificates(
 				DNSNames:    dnsNames,
 				IPAddresses: ipAddress,
 				SecretName:  secretRef.Name,
-				IssuerRef: cmmeta.ObjectReference{
+				IssuerRef: cmmeta.IssuerReference{
 					Name:  issuerName,
 					Kind:  issuerKind,
 					Group: issuerGroup,
@@ -493,14 +494,10 @@ func mergeAnnotations(a, b map[string]string) map[string]string {
 	merged := make(map[string]string)
 
 	// Copy annotations from the first map
-	for k, v := range a {
-		merged[k] = v
-	}
+	maps.Copy(merged, a)
 
 	// Copy annotations from the second map (overwriting if key exists)
-	for k, v := range b {
-		merged[k] = v
-	}
+	maps.Copy(merged, b)
 
 	return merged
 }

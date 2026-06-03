@@ -17,14 +17,13 @@ limitations under the License.
 package requestmanager
 
 import (
-	"context"
 	"fmt"
 	"reflect"
 	"strings"
 	"testing"
 	"time"
 
-	"github.com/kr/pretty"
+	"github.com/google/go-cmp/cmp"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -61,7 +60,7 @@ func relaxedCertificateRequestMatcher(l coretesting.Action, r coretesting.Action
 	objL.Spec.Request = nil
 	objR.Spec.Request = nil
 	if !reflect.DeepEqual(objL, objR) {
-		return fmt.Errorf("unexpected difference between actions: %s", pretty.Diff(objL, objR))
+		return fmt.Errorf("unexpected difference between actions (-want +got):\n%s", cmp.Diff(objL, objR))
 	}
 	return nil
 }
@@ -486,7 +485,7 @@ func TestProcessItem(t *testing.T) {
 			},
 			expectedEvents: []string{`Normal Requested Created new CertificateRequest resource "test-1"`},
 			expectedActions: []testpkg.Action{
-				testpkg.NewAction(coretesting.NewDeleteAction(cmapi.SchemeGroupVersion.WithResource("certificaterequests"), "testns", "test")),
+				testpkg.NewAction(coretesting.NewDeleteAction(cmapi.SchemeGroupVersion.WithResource("certificaterequests"), "testns", "test-1")),
 				testpkg.NewCustomMatch(coretesting.NewCreateAction(cmapi.SchemeGroupVersion.WithResource("certificaterequests"), "testns",
 					gen.CertificateRequestFrom(bundle1.certificateRequest,
 						gen.SetCertificateRequestName("test-1"),
@@ -765,7 +764,7 @@ func TestProcessItem(t *testing.T) {
 			}
 
 			// Call ProcessItem
-			err = w.controller.ProcessItem(context.Background(), key)
+			err = w.controller.ProcessItem(t.Context(), key)
 			switch {
 			case err != nil:
 				if test.err != err.Error() {

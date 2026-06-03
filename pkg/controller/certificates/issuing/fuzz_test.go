@@ -17,7 +17,6 @@ limitations under the License.
 package issuing
 
 import (
-	"context"
 	"testing"
 	"time"
 
@@ -42,7 +41,7 @@ var (
 func init() {
 	nextPrivateKeySecretName := "next-private-key"
 	baseCert = gen.Certificate("test",
-		gen.SetCertificateIssuer(cmmeta.ObjectReference{Name: "ca-issuer", Kind: "Issuer", Group: "foo.io"}),
+		gen.SetCertificateIssuer(cmmeta.IssuerReference{Name: "ca-issuer", Kind: "Issuer", Group: "foo.io"}),
 		gen.SetCertificateGeneration(3),
 		gen.SetCertificateSecretName("output"),
 		gen.SetCertificateRenewBefore(&metav1.Duration{Duration: time.Hour * 36}),
@@ -142,7 +141,7 @@ func FuzzProcessItem(f *testing.F) {
 		w.controller.localTemporarySigner = testLocalTemporarySignerFn(fuzzBundle.LocalTemporaryCertificateBytes)
 
 		// Invoke ProcessItem(). This is the method that this fuzzers tests.
-		_ = w.controller.ProcessItem(context.Background(), types.NamespacedName{
+		_ = w.controller.ProcessItem(t.Context(), types.NamespacedName{
 			Namespace: certificate.Namespace,
 			Name:      certificate.Name,
 		})

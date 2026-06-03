@@ -22,7 +22,7 @@ import (
 	"reflect"
 	"testing"
 
-	dns "github.com/akamai/AkamaiOPEN-edgegrid-golang/configdns-v2"
+	dns "github.com/akamai/AkamaiOPEN-edgegrid-golang/v12/pkg/dns"
 	"github.com/stretchr/testify/assert"
 
 	"github.com/cert-manager/cert-manager/pkg/issuer/acme/dns/util"
@@ -76,7 +76,7 @@ func TestNewDNSProvider(t *testing.T) {
 	assert.NoError(t, err)
 	// sample couple important fields
 	assert.Equal(t, akamai.serviceConsumerDomain, "akamai.example.com")
-	assert.Equal(t, fmt.Sprintf("%T", akamai.dnsclient), "*akamai.OpenDNSConfig")
+	assert.Equal(t, fmt.Sprintf("%T", akamai.dnsclient), "*akamai.OpenDNSClient")
 
 }
 
@@ -93,7 +93,7 @@ func TestPresentBasicFlow(t *testing.T) {
 	akamai.dnsclient.(*StubOpenDNSConfig).FuncErrors["RecordUpdate"] = fmt.Errorf("Update not expected")
 	akamai.dnsclient.(*StubOpenDNSConfig).FuncErrors["RecordDelete"] = fmt.Errorf("Delete not expected")
 
-	assert.NoError(t, akamai.Present(context.TODO(), "test.example.com", "_acme-challenge.test.example.com.", "dns01-key"))
+	assert.NoError(t, akamai.Present(t.Context(), "test.example.com", "_acme-challenge.test.example.com.", "dns01-key"))
 
 }
 
@@ -110,7 +110,7 @@ func TestPresentExists(t *testing.T) {
 	akamai.dnsclient.(*StubOpenDNSConfig).FuncErrors["RecordSave"] = fmt.Errorf("Save not expected")
 	akamai.dnsclient.(*StubOpenDNSConfig).FuncErrors["RecordDelete"] = fmt.Errorf("Delete not expected")
 
-	assert.NoError(t, akamai.Present(context.TODO(), "test.example.com", "_acme-challenge.test.example.com.", "dns01-key-stub"))
+	assert.NoError(t, akamai.Present(t.Context(), "test.example.com", "_acme-challenge.test.example.com.", "dns01-key-stub"))
 
 }
 
@@ -127,7 +127,7 @@ func TestPresentValueExists(t *testing.T) {
 	akamai.dnsclient.(*StubOpenDNSConfig).FuncErrors["RecordUpdate"] = fmt.Errorf("Update not expected")
 	akamai.dnsclient.(*StubOpenDNSConfig).FuncErrors["RecordDelete"] = fmt.Errorf("Delete not expected")
 
-	assert.NoError(t, akamai.Present(context.TODO(), "test.example.com", "_acme-challenge.test.example.com.", "dns01-key"))
+	assert.NoError(t, akamai.Present(t.Context(), "test.example.com", "_acme-challenge.test.example.com.", "dns01-key"))
 
 }
 
@@ -144,7 +144,7 @@ func TestPresentFailGetRecord(t *testing.T) {
 	akamai.dnsclient.(*StubOpenDNSConfig).FuncErrors["RecordUpdate"] = fmt.Errorf("Update not expected")
 	akamai.dnsclient.(*StubOpenDNSConfig).FuncErrors["RecordDelete"] = fmt.Errorf("Delete not expected")
 
-	assert.Error(t, akamai.Present(context.TODO(), "test.example.com", "_acme-challenge.test.example.com.", "dns01-key"))
+	assert.Error(t, akamai.Present(t.Context(), "test.example.com", "_acme-challenge.test.example.com.", "dns01-key"))
 
 }
 
@@ -160,7 +160,7 @@ func TestPresentFailSaveRecord(t *testing.T) {
 	akamai.dnsclient.(*StubOpenDNSConfig).FuncErrors["RecordUpdate"] = fmt.Errorf("Update not expected")
 	akamai.dnsclient.(*StubOpenDNSConfig).FuncErrors["RecordDelete"] = fmt.Errorf("Delete not expected")
 
-	assert.Error(t, akamai.Present(context.TODO(), "test.example.com", "_acme-challenge.test.example.com.", "dns01-key"))
+	assert.Error(t, akamai.Present(t.Context(), "test.example.com", "_acme-challenge.test.example.com.", "dns01-key"))
 
 }
 
@@ -177,7 +177,7 @@ func TestPresentFailUpdateRecord(t *testing.T) {
 	akamai.dnsclient.(*StubOpenDNSConfig).FuncErrors["RecordUpdate"] = fmt.Errorf("Update failed")
 	akamai.dnsclient.(*StubOpenDNSConfig).FuncErrors["RecordDelete"] = fmt.Errorf("Delete not expected")
 
-	assert.Error(t, akamai.Present(context.TODO(), "test.example.com", "_acme-challenge.test.example.com.", "dns01-key-stub"))
+	assert.Error(t, akamai.Present(t.Context(), "test.example.com", "_acme-challenge.test.example.com.", "dns01-key-stub"))
 
 }
 
@@ -194,7 +194,7 @@ func TestCleanUpBasicFlow(t *testing.T) {
 	akamai.dnsclient.(*StubOpenDNSConfig).FuncErrors["RecordSave"] = fmt.Errorf("Save not expected")
 	akamai.dnsclient.(*StubOpenDNSConfig).FuncErrors["RecordUpdate"] = fmt.Errorf("Update not expected")
 
-	assert.NoError(t, akamai.CleanUp(context.TODO(), "test.example.com", "_acme-challenge.test.example.com.", "dns01-key"))
+	assert.NoError(t, akamai.CleanUp(t.Context(), "test.example.com", "_acme-challenge.test.example.com.", "dns01-key"))
 
 }
 
@@ -211,7 +211,7 @@ func TestCleanUpExists(t *testing.T) {
 	akamai.dnsclient.(*StubOpenDNSConfig).FuncErrors["RecordSave"] = fmt.Errorf("Save not expected")
 	akamai.dnsclient.(*StubOpenDNSConfig).FuncErrors["RecordDelete"] = fmt.Errorf("Delete not expected")
 
-	assert.NoError(t, akamai.CleanUp(context.TODO(), "test.example.com", "_acme-challenge.test.example.com.", "dns01-key-stub"))
+	assert.NoError(t, akamai.CleanUp(t.Context(), "test.example.com", "_acme-challenge.test.example.com.", "dns01-key-stub"))
 
 }
 
@@ -228,7 +228,7 @@ func TestCleanUpExistsNoValue(t *testing.T) {
 	akamai.dnsclient.(*StubOpenDNSConfig).FuncErrors["RecordUpdate"] = fmt.Errorf("Update not expected")
 	akamai.dnsclient.(*StubOpenDNSConfig).FuncErrors["RecordDelete"] = fmt.Errorf("Delete not expected")
 
-	assert.NoError(t, akamai.CleanUp(context.TODO(), "test.example.com", "_acme-challenge.test.example.com.", "dns01-key-stub"))
+	assert.NoError(t, akamai.CleanUp(t.Context(), "test.example.com", "_acme-challenge.test.example.com.", "dns01-key-stub"))
 
 }
 
@@ -245,7 +245,7 @@ func TestCleanUpNoRecord(t *testing.T) {
 	akamai.dnsclient.(*StubOpenDNSConfig).FuncErrors["RecordUpdate"] = fmt.Errorf("Update not expected")
 	akamai.dnsclient.(*StubOpenDNSConfig).FuncErrors["RecordDelete"] = fmt.Errorf("Delete not expected")
 
-	assert.NoError(t, akamai.CleanUp(context.TODO(), "test.example.com", "_acme-challenge.test.example.com.", "dns01"))
+	assert.NoError(t, akamai.CleanUp(t.Context(), "test.example.com", "_acme-challenge.test.example.com.", "dns01"))
 
 }
 
@@ -262,7 +262,7 @@ func TestCleanUpFailGetRecord(t *testing.T) {
 	akamai.dnsclient.(*StubOpenDNSConfig).FuncErrors["RecordUpdate"] = fmt.Errorf("Update not expected")
 	akamai.dnsclient.(*StubOpenDNSConfig).FuncErrors["RecordDelete"] = fmt.Errorf("Delete not expected")
 
-	assert.Error(t, akamai.CleanUp(context.TODO(), "test.example.com", "_acme-challenge.test.example.com.", "dns01-key"))
+	assert.Error(t, akamai.CleanUp(t.Context(), "test.example.com", "_acme-challenge.test.example.com.", "dns01-key"))
 
 }
 
@@ -279,7 +279,7 @@ func TestCleanUpFailUpdateRecord(t *testing.T) {
 	akamai.dnsclient.(*StubOpenDNSConfig).FuncErrors["RecordUpdate"] = fmt.Errorf("Update failed")
 	akamai.dnsclient.(*StubOpenDNSConfig).FuncErrors["RecordDelete"] = fmt.Errorf("Delete not expected")
 
-	assert.Error(t, akamai.CleanUp(context.TODO(), "test.example.com", "_acme-challenge.test.example.com.", "dns01-key-stub"))
+	assert.Error(t, akamai.CleanUp(t.Context(), "test.example.com", "_acme-challenge.test.example.com.", "dns01-key-stub"))
 
 }
 
@@ -296,12 +296,12 @@ func TestCleanUpFailDeleteRecord(t *testing.T) {
 	akamai.dnsclient.(*StubOpenDNSConfig).FuncErrors["RecordUpdate"] = fmt.Errorf("Update not expected")
 	akamai.dnsclient.(*StubOpenDNSConfig).FuncErrors["RecordDelete"] = fmt.Errorf("Delete failed")
 
-	assert.Error(t, akamai.CleanUp(context.TODO(), "test.example.com", "_acme-challenge.test.example.com.", "dns01-key"))
+	assert.Error(t, akamai.CleanUp(t.Context(), "test.example.com", "_acme-challenge.test.example.com.", "dns01-key"))
 
 }
 
 // Stub Get Record
-func (o StubOpenDNSConfig) GetRecord(zone string, name string, recordType string) (*dns.RecordBody, error) {
+func (o StubOpenDNSConfig) GetRecord(ctx context.Context, zone string, name string, recordType string) (*dns.RecordBody, error) {
 
 	var rec *dns.RecordBody
 
@@ -329,7 +329,7 @@ func (o StubOpenDNSConfig) GetRecord(zone string, name string, recordType string
 
 }
 
-func (o StubOpenDNSConfig) RecordSave(rec *dns.RecordBody, zone string) error {
+func (o StubOpenDNSConfig) RecordSave(ctx context.Context, rec *dns.RecordBody, zone string) error {
 
 	exp, ok := o.FuncOutput["RecordSave"]
 	if ok {
@@ -356,7 +356,7 @@ func (o StubOpenDNSConfig) RecordSave(rec *dns.RecordBody, zone string) error {
 
 }
 
-func (o StubOpenDNSConfig) RecordUpdate(rec *dns.RecordBody, zone string) error {
+func (o StubOpenDNSConfig) RecordUpdate(ctx context.Context, rec *dns.RecordBody, zone string) error {
 
 	exp, ok := o.FuncOutput["RecordUpdate"]
 	if ok {
@@ -382,7 +382,7 @@ func (o StubOpenDNSConfig) RecordUpdate(rec *dns.RecordBody, zone string) error 
 	return nil
 }
 
-func (o StubOpenDNSConfig) RecordDelete(rec *dns.RecordBody, zone string) error {
+func (o StubOpenDNSConfig) RecordDelete(ctx context.Context, rec *dns.RecordBody, zone string) error {
 
 	exp, ok := o.FuncOutput["RecordDelete"]
 	if ok {

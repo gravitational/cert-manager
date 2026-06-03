@@ -35,21 +35,19 @@ import (
 	"k8s.io/client-go/tools/leaderelection"
 	"k8s.io/client-go/tools/leaderelection/resourcelock"
 	"k8s.io/client-go/tools/record"
-	"k8s.io/utils/clock"
 
 	"github.com/cert-manager/cert-manager/controller-binary/app/options"
 	config "github.com/cert-manager/cert-manager/internal/apis/config/controller"
 	"github.com/cert-manager/cert-manager/internal/apis/config/shared"
 	"github.com/cert-manager/cert-manager/internal/controller/feature"
-	"github.com/cert-manager/cert-manager/pkg/acme/accounts"
 	"github.com/cert-manager/cert-manager/pkg/controller"
 	"github.com/cert-manager/cert-manager/pkg/healthz"
 	dnsutil "github.com/cert-manager/cert-manager/pkg/issuer/acme/dns/util"
 	logf "github.com/cert-manager/cert-manager/pkg/logs"
-	"github.com/cert-manager/cert-manager/pkg/metrics"
 	"github.com/cert-manager/cert-manager/pkg/server"
 	"github.com/cert-manager/cert-manager/pkg/server/tls"
 	"github.com/cert-manager/cert-manager/pkg/server/tls/authority"
+	"github.com/cert-manager/cert-manager/pkg/util"
 	utilfeature "github.com/cert-manager/cert-manager/pkg/util/feature"
 	"github.com/cert-manager/cert-manager/pkg/util/profiling"
 )
@@ -71,6 +69,9 @@ func Run(rootCtx context.Context, opts *config.ControllerConfiguration) error {
 
 	log := logf.FromContext(rootCtx)
 	g, rootCtx := errgroup.WithContext(rootCtx)
+
+	versionInfo := util.VersionInfo()
+	log.Info("starting cert-manager controller", "version", versionInfo.GitVersion, "git_commit", versionInfo.GitCommit, "go_version", versionInfo.GoVersion, "platform", versionInfo.Platform)
 
 	ctxFactory, err := buildControllerContextFactory(rootCtx, opts)
 	if err != nil {
@@ -102,7 +103,7 @@ func Run(rootCtx context.Context, opts *config.ControllerConfiguration) error {
 	}
 
 	// Start metrics server
-	metricsLn, err := server.Listen("tcp", opts.MetricsListenAddress,
+	metricsLn, err := server.Listen(rootCtx, "tcp", opts.MetricsListenAddress,
 		server.WithCertificateSource(certificateSource),
 		server.WithTLSCipherSuites(opts.MetricsTLSConfig.CipherSuites),
 		server.WithTLSMinVersion(opts.MetricsTLSConfig.MinTLSVersion),
@@ -110,6 +111,9 @@ func Run(rootCtx context.Context, opts *config.ControllerConfiguration) error {
 	if err != nil {
 		return fmt.Errorf("failed to listen on prometheus address %s: %v", opts.MetricsListenAddress, err)
 	}
+
+	ctx.Metrics.SetupACMECollector(ctx.SharedInformerFactory.Acme().V1().Challenges().Lister())
+	ctx.Metrics.SetupCertificateCollector(ctx.SharedInformerFactory.Certmanager().V1().Certificates().Lister())
 	metricsServer := ctx.Metrics.NewServer(metricsLn)
 
 	g.Go(func() error {
@@ -131,7 +135,8 @@ func Run(rootCtx context.Context, opts *config.ControllerConfiguration) error {
 
 	// Start profiler if it is enabled
 	if opts.EnablePprof {
-		profilerLn, err := net.Listen("tcp", opts.PprofAddress)
+		lc := net.ListenConfig{}
+		profilerLn, err := lc.Listen(rootCtx, "tcp", opts.PprofAddress)
 		if err != nil {
 			return fmt.Errorf("failed to listen on profiler address %s: %v", opts.PprofAddress, err)
 		}
@@ -160,7 +165,8 @@ func Run(rootCtx context.Context, opts *config.ControllerConfiguration) error {
 			return nil
 		})
 	}
-	healthzListener, err := net.Listen("tcp", opts.HealthzListenAddress)
+	lc := net.ListenConfig{}
+	healthzListener, err := lc.Listen(rootCtx, "tcp", opts.HealthzListenAddress)
 	if err != nil {
 		return fmt.Errorf("failed to listen on healthz address %s: %v", opts.HealthzListenAddress, err)
 	}
@@ -304,7 +310,6 @@ func buildControllerContextFactory(ctx context.Context, opts *config.ControllerC
 	}
 
 	ACMEHTTP01SolverRunAsNonRoot := opts.ACMEHTTP01Config.SolverRunAsNonRoot
-	acmeAccountRegistry := accounts.NewDefaultRegistry()
 
 	ctxFactory, err := controller.NewContextFactory(ctx, controller.ContextOptions{
 		Kubeconfig:         opts.KubeConfig,
@@ -313,9 +318,6 @@ func buildControllerContextFactory(ctx context.Context, opts *config.ControllerC
 		APIServerHost:      opts.APIServerHost,
 
 		Namespace: opts.Namespace,
-
-		Clock:   clock.RealClock{},
-		Metrics: metrics.New(log, clock.RealClock{}),
 
 		ACMEOptions: controller.ACMEOptions{
 			HTTP01SolverResourceRequestCPU:    http01SolverResourceRequestCPU,
@@ -331,8 +333,6 @@ func buildControllerContextFactory(ctx context.Context, opts *config.ControllerC
 			DNS01CheckRetryPeriod:   opts.ACMEDNS01Config.CheckRetryPeriod,
 			DNS01CheckAuthoritative: !opts.ACMEDNS01Config.RecursiveNameserversOnly,
 			DNS01PropagationTime:    opts.ACMEDNS01Config.PropagationTime,
-
-			AccountRegistry: acmeAccountRegistry,
 		},
 
 		SchedulerOptions: controller.SchedulerOptions{

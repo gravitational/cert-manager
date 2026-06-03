@@ -82,7 +82,7 @@ func TestSyncHappyPath(t *testing.T) {
 		},
 	}))
 	baseChallenge := gen.Challenge("testchal",
-		gen.SetChallengeIssuer(cmmeta.ObjectReference{
+		gen.SetChallengeIssuer(cmmeta.IssuerReference{
 			Name: "testissuer",
 		}),
 		gen.SetChallengeFinalizers([]string{cmacme.ACMEDomainQualifiedFinalizer}),
@@ -610,7 +610,7 @@ func runTest(t *testing.T, test testT) {
 	c.dnsSolver = test.dnsSolver
 	test.builder.Start()
 
-	err := c.Sync(context.Background(), test.challenge)
+	err := c.Sync(t.Context(), test.challenge)
 	if err != nil && !test.expectErr {
 		t.Errorf("Expected function to not error, but got: %v", err)
 	}

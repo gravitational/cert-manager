@@ -276,7 +276,8 @@ type ACMEChallengeSolverHTTP01IngressPodTemplate struct {
 
 	// PodSpec defines overrides for the HTTP01 challenge solver pod.
 	// Only the 'priorityClassName', 'nodeSelector', 'affinity',
-	// 'serviceAccountName' and 'tolerations' fields are supported currently.
+	// 'serviceAccountName', 'tolerations', 'imagePullSecrets', 'securityContext',
+	// and 'resources' fields are supported currently.
 	// All other fields will be ignored.
 	// +optional
 	Spec ACMEChallengeSolverHTTP01IngressPodSpec
@@ -316,6 +317,15 @@ type ACMEChallengeSolverHTTP01IngressPodSpec struct {
 	// If specified, the pod's security context
 	// +optional
 	SecurityContext *ACMEChallengeSolverHTTP01IngressPodSecurityContext `json:"securityContext,omitempty"`
+
+	// If specified, the pod's resource requirements.
+	// These values override the global resource configuration flags.
+	// Note that when only specifying resource limits, ensure they are greater than or equal
+	// to the corresponding global resource requests configured via controller flags
+	// (--acme-http01-solver-resource-request-cpu, --acme-http01-solver-resource-request-memory).
+	// Kubernetes will reject pod creation if limits are lower than requests, causing challenge failures.
+	// +optional
+	Resources *ACMEChallengeSolverHTTP01IngressPodResources `json:"resources,omitempty"`
 }
 
 type ACMEChallengeSolverHTTP01IngressTemplate struct {
@@ -445,6 +455,21 @@ type ACMEChallengeSolverHTTP01IngressPodSecurityContext struct {
 	// Note that this field cannot be set when spec.os.name is windows.
 	// +optional
 	SeccompProfile *corev1.SeccompProfile `json:"seccompProfile,omitempty"`
+}
+
+// ACMEChallengeSolverHTTP01IngressPodResources defines resource requirements for ACME HTTP01 solver pods.
+// To keep API surface essential, this trims down the 'corev1.ResourceRequirements' type to only include the Requests and Limits fields.
+type ACMEChallengeSolverHTTP01IngressPodResources struct {
+	// Limits describes the maximum amount of compute resources allowed.
+	// More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/
+	// +optional
+	Limits corev1.ResourceList
+	// Requests describes the minimum amount of compute resources required.
+	// If Requests is omitted for a container, it defaults to Limits if that is explicitly specified,
+	// otherwise to the global values configured via controller flags. Requests cannot exceed Limits.
+	// More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/
+	// +optional
+	Requests corev1.ResourceList
 }
 
 // CNAMEStrategy configures how the DNS01 provider should handle CNAME records
@@ -624,7 +649,7 @@ type ACMEIssuerDNS01ProviderAcmeDNS struct {
 type ACMEIssuerDNS01ProviderRFC2136 struct {
 	// The IP address or hostname of an authoritative DNS server supporting
 	// RFC2136 in the form host:port. If the host is an IPv6 address it must be
-	// enclosed in square brackets (e.g [2001:db8::1]) ; port is optional.
+	// enclosed in square brackets (e.g [2001:db8::1]); port is optional.
 	// This field is required.
 	Nameserver string
 
@@ -641,7 +666,18 @@ type ACMEIssuerDNS01ProviderRFC2136 struct {
 	// Supported values are (case-insensitive): ``HMACMD5`` (default),
 	// ``HMACSHA1``, ``HMACSHA256`` or ``HMACSHA512``.
 	TSIGAlgorithm string
+
+	// Protocol to use for dynamic DNS update queries. Valid values are (case-sensitive) ``TCP`` and ``UDP``; ``UDP`` (default).
+	// +optional
+	Protocol RFC2136UpdateProtocol
 }
+
+type RFC2136UpdateProtocol string
+
+const (
+	RFC2136UpdateProtocolTCP RFC2136UpdateProtocol = "TCP"
+	RFC2136UpdateProtocolUDP RFC2136UpdateProtocol = "UDP"
+)
 
 // ACMEIssuerDNS01ProviderWebhook specifies configuration for a webhook DNS01
 // provider, including where to POST ChallengePayload resources.

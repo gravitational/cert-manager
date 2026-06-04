@@ -21,7 +21,6 @@ import (
 	"crypto"
 	"crypto/rsa"
 	"fmt"
-	"net/http"
 	"net/url"
 	"reflect"
 	"slices"
@@ -536,7 +535,7 @@ func TestAcme_Setup(t *testing.T) {
 				RemoveClientFunc: func(string) {
 					removeClientWasCalled = true
 				},
-				AddClientFunc: func(string, cmacme.ACMEIssuer, *rsa.PrivateKey, string) {
+				AddClientFunc: func(string, accounts.NewClientOptions) {
 					addClientWasCalled = true
 				},
 				IsKeyCheckSumCachedFunc: func(lastPrivateKeyHash string, privateKey *rsa.PrivateKey) bool {
@@ -562,7 +561,9 @@ func TestAcme_Setup(t *testing.T) {
 			// Mock events recorder.
 			recorder := new(controllertest.FakeRecorder)
 			a := Acme{
-				issuer:          test.issuer,
+				resourceNamespace: func(iss cmapi.GenericIssuer) string {
+					return iss.GetNamespace()
+				},
 				secretsClient:   secretsClient,
 				accountRegistry: ar,
 				keyFromSecret:   kfs,
@@ -575,7 +576,7 @@ func TestAcme_Setup(t *testing.T) {
 			apiutil.Clock = fakeclock
 
 			// Verify that an error is/is not returned as expected.
-			gotErr := a.Setup(context.Background())
+			gotErr := a.Setup(t.Context(), test.issuer)
 			if gotErr == nil && test.wantsErr {
 				t.Errorf("Expected error %v, got %v", test.wantsErr, gotErr)
 			}
@@ -602,7 +603,7 @@ func TestAcme_Setup(t *testing.T) {
 			}
 
 			// Verify issuer's state after Setup was called.
-			gotConditions := a.issuer.GetStatus().Conditions
+			gotConditions := test.issuer.GetStatus().Conditions
 			// Issuer can only have a single condition, so no need to sort the
 			// conditions.
 			if !reflect.DeepEqual(gotConditions, test.expectedConditions) {
@@ -629,7 +630,7 @@ func keyFromSecretMockBuilder(wasCalled *bool, key crypto.Signer, err error) key
 }
 
 func clientBuilderMock(cl acmecl.Interface) accounts.NewClientFunc {
-	return func(*http.Client, cmacme.ACMEIssuer, *rsa.PrivateKey, string) acmecl.Interface {
+	return func(_ accounts.NewClientOptions) acmecl.Interface {
 		return cl
 	}
 }

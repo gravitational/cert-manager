@@ -85,14 +85,14 @@ func TestSync(t *testing.T) {
 
 	testOrder := gen.Order("testorder",
 		gen.SetOrderCommonName("test.com"),
-		gen.SetOrderIssuer(cmmeta.ObjectReference{
+		gen.SetOrderIssuer(cmmeta.IssuerReference{
 			Name: testIssuerHTTP01TestCom.Name,
 		}),
 	)
 
 	testOrderIP := gen.Order("testorder",
 		gen.SetOrderCommonName("10.0.0.2"),
-		gen.SetOrderIssuer(cmmeta.ObjectReference{
+		gen.SetOrderIssuer(cmmeta.IssuerReference{
 			Name: testIssuerHTTP01.Name,
 		}),
 		gen.SetOrderIPAddresses("10.0.0.1"))
@@ -102,7 +102,7 @@ func TestSync(t *testing.T) {
 
 	testOrderIPV6 := gen.Order("testorder",
 		gen.SetOrderCommonName(ipv6AddressOne),
-		gen.SetOrderIssuer(cmmeta.ObjectReference{
+		gen.SetOrderIssuer(cmmeta.IssuerReference{
 			Name: testIssuerHTTP01.Name,
 		}),
 		gen.SetOrderIPAddresses(ipv6AddressTwo))
@@ -305,7 +305,7 @@ Dfvp7OOGAN6dEOM4+qR9sdjoSYKEBpsr6GtPAQw4dy753ec5
 			return "key", nil
 		},
 	}
-	testAuthorizationChallenge, err := buildPartialChallenge(context.TODO(), testIssuerHTTP01TestCom, testOrderPending, testOrderPending.Status.Authorizations[0])
+	testAuthorizationChallenge, err := buildPartialChallenge(t.Context(), testIssuerHTTP01TestCom, testOrderPending, testOrderPending.Status.Authorizations[0])
 
 	if err != nil {
 		t.Fatalf("error building Challenge resource test fixture: %v", err)
@@ -492,7 +492,7 @@ Dfvp7OOGAN6dEOM4+qR9sdjoSYKEBpsr6GtPAQw4dy753ec5
 				},
 				ExpectedEvents: []string{
 					//nolint: dupword
-					`Normal Created Created Challenge resource "testorder-756011405" for domain "test.com"`,
+					`Normal Created Created Challenge resource "testorder-2580184217" for domain "test.com"`,
 				},
 			},
 			acmeClient: &acmecl.FakeACME{
@@ -1056,7 +1056,7 @@ func runTest(t *testing.T, test testT) {
 
 	test.builder.Start()
 
-	err = cw.Sync(context.Background(), test.order)
+	err = cw.Sync(t.Context(), test.order)
 	if err != nil && !test.expectErr {
 		t.Errorf("Expected function to not error, but got: %v", err)
 	}

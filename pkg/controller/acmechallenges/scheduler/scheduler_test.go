@@ -17,7 +17,6 @@ limitations under the License.
 package scheduler
 
 import (
-	"context"
 	"fmt"
 	"testing"
 	"time"
@@ -365,7 +364,7 @@ func TestScheduleN(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			cl := fake.NewSimpleClientset()
+			cl := fake.NewClientset()
 			factory := cminformers.NewSharedInformerFactory(cl, 0)
 			challengesInformer := factory.Acme().V1().Challenges()
 			for _, ch := range test.challenges {
@@ -373,7 +372,7 @@ func TestScheduleN(t *testing.T) {
 				require.NoError(t, err)
 			}
 
-			s := New(context.Background(), challengesInformer.Lister(), maxConcurrentChallenges)
+			s := New(t.Context(), challengesInformer.Lister(), maxConcurrentChallenges)
 
 			if test.expected == nil {
 				test.expected = []*cmacme.Challenge{}

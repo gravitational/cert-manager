@@ -12,6 +12,7 @@ jobs:
   analyze:
     name: Analyze
     runs-on: ubuntu-latest
+    if: github.repository == 'cert-manager/cert-manager'
     permissions:
       actions: read
       contents: read

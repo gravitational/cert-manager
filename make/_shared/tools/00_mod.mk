@@ -217,7 +217,7 @@ tools += $(ADDITIONAL_TOOLS)
 
 # https://go.dev/dl/
 # renovate: datasource=golang-version packageName=go
-VENDORED_GO_VERSION := 1.25.9
+VENDORED_GO_VERSION := 1.27.3
 
 # Print the go version which can be used in GH actions
 .PHONY: print-go-version
